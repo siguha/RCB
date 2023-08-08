@@ -38,6 +38,10 @@ class SheetUtilities:
         except:
             raise e.UserNotFound('SteamID not found in database. Profile not synced.')
 
+    # async def bulk_id_fetch(self, dids: list[int]) -> list[str]:
+    #     db = await aiosqlite.connect('ids.db')
+    #     ids 
+
     async def last_row(self, sheet: gspread.Worksheet, col: int = 2) -> None:
         """Fetches the last row of a column.
         
@@ -171,4 +175,7 @@ class SheetUtilities:
 
                 return data
 
+    class AarUtils:
+        ...
+        
 # https://discord.com/api/oauth2/authorize?client_id=1109688912026288168&permissions=8&scope=bot%20applications.commands

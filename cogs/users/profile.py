@@ -29,7 +29,7 @@ class Profiles(commands.GroupCog, name = "profile", description = "Profile comma
 
             member = interaction.user if user is None else user
 
-            await self.utils.profile_sync(steamid, member.id, member.display_name)
+            await self.utils.profile_sync(steamid, member.id, member.display_name)       
 
     @app_commands.command(name = "view", description = "View a Commando's profile.")
     async def profile_view(self, interaction: discord.Interaction, user: discord.Member) -> None:
@@ -63,7 +63,7 @@ class Profiles(commands.GroupCog, name = "profile", description = "Profile comma
             await interaction.response.send_message(content = f"{e.__class__.__name__}: {e}")
             return 1
 
-        embed = discord.Embed(title = "NCO Stats Viewer", description = f"Last promoted on **{data['PROMO_DATE']}**, **{data['PROMO_DAYS']}** days ago.\n\nLast AAR on **{data['LAST_AAR']}**.", timestamp = datetime.now(), color = discord.Colour.yellow())
+        embed = discord.Embed(title = "NCO Stats Viewer", description = f"Last Seen on **{data['LAST_SEEN']}**, **{data['LAST_SEEN_DAYS']}** days ago.\n\nLast Promoted on **{data['PROMO_DATE']}**, **{data['PROMO_DAYS']}** days ago.\n\nLast AAR on **{data['LAST_AAR']}**, **{data['LAST_AAR_DAYS']}** days ago.\n\nCurrent Activity Status: `{data['LOA']}`", timestamp = datetime.now(), color = discord.Colour.dark_green())
         embed.set_author(name = f"{user.display_name}'s Stats Summary", icon_url = "https://i.imgur.com/rgsTDEj.png")
         embed.add_field(name = "Logging Stats", value = f"**Total Logs**: {data['LOGS']}\n**Participated Logs**: {data['PARTICIPATED']}\n**Leads**: {data['LEADS']}")
         embed.set_footer(text = "DO NOT DISCLOSE THIS INFORMATION.")
@@ -80,7 +80,7 @@ class Profiles(commands.GroupCog, name = "profile", description = "Profile comma
             await interaction.response.send_message(content = f"{e.__class__.__name__}: {e}")
             return 1
 
-        embed = discord.Embed(title = "Officer Stats Viewer", description = f"Last promoted on **{data['PROMO_DATE']}**, **{data['PROMO_DAYS']}** days ago.\n\nLast AAR on **{data['LAST_AAR']}**.", timestamp = datetime.now(), color = discord.Colour.yellow())
+        embed = discord.Embed(title = "Officer Stats Viewer", description = f"Last Seen on **{data['LAST_SEEN']}**, **{data['LAST_SEEN_DAYS']}** days ago.\n\nLast Promoted on **{data['PROMO_DATE']}**, **{data['PROMO_DAYS']}** days ago.\n\nLast AAR on **{data['LAST_AAR']}**, **{data['LAST_AAR_DAYS']}** days ago.\n\nCurrent Activity Status: `{data['LOA']}`", timestamp = datetime.now(), color = discord.Colour.yellow())
         embed.set_author(name = f"{user.display_name}'s Stats Summary", icon_url = "https://i.imgur.com/rgsTDEj.png")
         embed.add_field(name = "Logging Stats", value = f"**Total Logs**: {data['LOGS']}\n**Participated Logs**: {data['PARTICIPATED']}\n**Trainings Hosted**: {data['TRAININGS']}\n**Co-Hosts**: {data['COHOSTS']}\n**Leads**: {data['LEADS']}\n**SGT Trials**: {data['SGT_TRIALS']}\n**Basic Training**: {data['BT_TRIALS']}")
         embed.set_footer(text = "DO NOT DISCLOSE THIS INFORMATION.\n")

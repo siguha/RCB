@@ -49,6 +49,7 @@ class AARs(commands.GroupCog, name = "aar", description = "AAR Commandset."):
         AAR_CH = guild.get_channel(343795194333757441)
 
     @app_commands.command(name = 'log', description = 'Log an AAR.')
+    @app_commands.checks.has_any_role(333432642878046209, 333432981605580800, 452534405874057217)
     async def aar_log(self, interaction: discord.Interaction, *, type: str, logger: discord.Member = None, bt: str = None, trial: str = None, cohost: discord.Member = None, lead: discord.Member = None, testee: discord.Member = None) -> None:
         if type not in self.types:
             await interaction.response.send_message(content = f'Type *{type}* does not exist. Try again.', ephemeral = True, delete_after = 5)
@@ -224,6 +225,7 @@ class AARs(commands.GroupCog, name = "aar", description = "AAR Commandset."):
             await interaction.followup.send(content = f"AAR Logged. [Jump!]({msg.jump_url})", ephemeral = True)
 
     @app_commands.command(name = 'remove', description = 'Remove an AAR')
+    @app_commands.checks.has_any_role(333432642878046209, 333432981605580800, 452534405874057217)
     async def aar_remove(self, interaction: discord.Interaction, log_id: int):
         await interaction.response.defer(ephemeral = True)
         msg_id = await UTILS.aar_fetch(log_id)
@@ -237,6 +239,7 @@ class AARs(commands.GroupCog, name = "aar", description = "AAR Commandset."):
             await interaction.followup.send(f"Log `{log_id}` has been removed.", ephemeral = True)
 
     @app_commands.command(name = 'edit', description = 'Edit an AAR.')
+    @app_commands.checks.has_any_role(333432642878046209, 333432981605580800, 452534405874057217)
     async def aar_edit(self, interaction: discord.Interaction, log_id: int):
         msg_id = await UTILS.aar_fetch(log_id)
         msg = await AAR_CH.fetch_message(msg_id)
@@ -254,6 +257,7 @@ class AARs(commands.GroupCog, name = "aar", description = "AAR Commandset."):
                 embed.set_field_at(index, name = f"{titles[index]}", value = field.value, inline = False)
     
     @app_commands.command(name = 'append', description = 'Append a user to the end of an AAR.')
+    @app_commands.checks.has_any_role(333432642878046209, 333432981605580800, 452534405874057217)
     async def aar_append(self, interaction: discord.Interaction, log_id: int):
         embed = discord.Embed(title = "AAR Appending Tool", description = "Please select member(s) from below to add to your AAR.\n\n*If you misclick out of the select menu and cancel the command, you can always re-run this command.*", colour = discord.Colour.red())
         select = Views.MemberSelect()
@@ -276,6 +280,7 @@ class AARs(commands.GroupCog, name = "aar", description = "AAR Commandset."):
             await interaction.followup.send(f'Added {" ".join(list(member.mention for member in members))} to log: `{log_id}`. [ORIGINAL]({msg.jump_url})', ephemeral = True)
 
     @app_commands.command(name = "pop", description = "Remove a user from an AAR.")
+    @app_commands.checks.has_any_role(333432642878046209, 333432981605580800, 452534405874057217)
     async def aar_pop(self, interaction: discord.Interaction, log_id: int, user: discord.Member): # , user: discord.Member
         msg_id = await UTILS.aar_fetch(log_id)
         msg = await AAR_CH.fetch_message(msg_id)

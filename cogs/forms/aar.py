@@ -59,8 +59,9 @@ class AARs(commands.GroupCog, name = "aar", description = "AAR Commandset."):
 
             select = Views.MemberSelect()
             log_id = datetime.now().strftime("%H%M%S%d%m%Y")
-            embed = discord.Embed(title = "RC Logging Systems", description = f"Logged by {logger.mention}.", timestamp = datetime.now())
-            embed.add_field(name = "Log Type", value = type, inline = False)
+            embed = discord.Embed(title = f"{type} Logging", description = f"Logged by {logger.mention}.", timestamp = datetime.now())
+            embed.set_author(name = "RC Logging Systems", icon_url = "https://i.imgur.com/3gTO5ie.png")
+            # embed.add_field(name = "Log Type", value = type, inline = False)
             embed.set_footer(text = f"LOG ID: {log_id}")
 
             if type == 'Lead' or type == 'Lead Spectate':

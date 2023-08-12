@@ -4,13 +4,9 @@ import os
 from dotenv import load_dotenv
 
 """
-Written by user sigrao for Superior Severs CWRP
+Written by @sigRao for Superior Severs CWRP
 
-Republic Commandos
-
-TO-DO:
-
-- DB for IDs to make fetching them faster? (While also storing them in the sheet)
+for the Republic Commandos
 """
 
 load_dotenv()
@@ -27,6 +23,7 @@ class RCBot(commands.Bot):
 
         self.init_extensions = [
             'cogs.admin',
+            'cogs.forms.aar',
             'cogs.users.profile',
         ]
 

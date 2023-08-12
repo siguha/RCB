@@ -23,6 +23,7 @@ class Admin(commands.Cog):
             await ctx.send(f'{e.__class__.__name__}: {e}')
 
         else:
+            await ctx.message.delete()
             await ctx.send('Extension successfully loaded.', delete_after = 5)
 
     @commands.hybrid_command(name = "unload", with_app_command = False)
@@ -35,6 +36,7 @@ class Admin(commands.Cog):
             await ctx.send(f'{e.__class__.__name__}: {e}')
 
         else:
+            await ctx.message.delete()
             await ctx.send('Extension successfully unloaded.', delete_after = 5)
 
     @commands.hybrid_command(name = "reload", with_app_command = False)
@@ -47,11 +49,13 @@ class Admin(commands.Cog):
             await ctx.send(f'{e.__class__.__name__}: {e}')
 
         else:
+            await ctx.message.delete()
             await ctx.send('Extension successfully reloaded.', delete_after = 5)
 
     @commands.hybrid_command(name = "sync", with_app_command = False)
     async def reload(self, ctx: commands.Context):
         await self.client.tree.sync()
+        await ctx.message.delete()
         await ctx.send('Command tree re-synced.', delete_after = 5)
         
 async def setup(client: commands.Bot) -> None:

@@ -24,6 +24,7 @@ class RCBot(commands.Bot):
         self.init_extensions = [
             'cogs.admin',
             'cogs.forms.aar',
+            'cogs.forms.loa',
             'cogs.users.profile',
         ]
 

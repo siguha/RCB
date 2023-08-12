@@ -11,6 +11,7 @@ AAR = SA.open_by_url('https://docs.google.com/spreadsheets/d/1dQso9v7GN4yXE5MsiT
 AARs = AAR.worksheet('AAR Logs')
 TRYOUTS = PUBLIC.worksheet('Tryouts')
 ROSTER = PUBLIC.worksheet('Roster')
+LOAS = PUBLIC.worksheet('LOA / ROA')
 DATABASE = OFFICER.worksheet('Officer View')
 IDS = OFFICER.worksheet('IDs')
 e = Exceptions()
@@ -286,5 +287,16 @@ class SheetUtilities:
             row_vals = AARs.row_values(log_loc.row)
             col = row_vals.index(str(user)) + 1
             AARs.update_cell(log_loc.row, col, '')
+
+    class LOAUtils:
+        """LOA Utilities class of SheetUtilities."""
+
+        def __init__(self):
+            self.utils = SheetUtilities()
+
+        async def loa_add(self, *, name: str, user_id: int, start_date: str, end_date: str, type: str, reason: str):
+            last_row = await self.utils.last_row(LOAS, 3)
+            steamid = await self.utils.id_fetch(user_id)
+            LOAS.append_row([name, steamid, start_date, end_date, None, type, None, reason], value_input_option = 'USER_ENTERED', insert_data_option = 'OVERWRITE', table_range = f'C{last_row}:J{last_row}')
 
 # https://discord.com/api/oauth2/authorize?client_id=1109688912026288168&permissions=8&scope=bot%20applications.commands

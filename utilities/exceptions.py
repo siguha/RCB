@@ -7,7 +7,10 @@ class Exceptions:
         """Raised when an AAR log is not found in the AAR sheet."""
         pass
     
-    class LOAInvalid(Exception):
-        """RAised when an LOA is invalid."""
+    class LOANotFound(Exception):
+        """Raised when an LOA doesn't exist in LOA sheet."""
         pass
     
+    class LOAExisting(Exception):
+        """Raised when a user has an active LOA."""
+        pass

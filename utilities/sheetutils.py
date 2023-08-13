@@ -293,10 +293,57 @@ class SheetUtilities:
 
         def __init__(self):
             self.utils = SheetUtilities()
+            self.conversions = {
+                'Start' : 5,
+                'End' : 6,
+                'Type' : 8
+            }
 
         async def loa_add(self, *, name: str, user_id: int, start_date: str, end_date: str, type: str, reason: str):
             last_row = await self.utils.last_row(LOAS, 3)
             steamid = await self.utils.id_fetch(user_id)
+            if LOAS.find(steamid) is not None:
+                raise e.LOAExisting(f"User {steamid} has an existing LOA.")
+            
             LOAS.append_row([name, steamid, start_date, end_date, None, type, None, reason], value_input_option = 'USER_ENTERED', insert_data_option = 'OVERWRITE', table_range = f'C{last_row}:J{last_row}')
 
+        async def loa_end(self, *, user: int) -> bool:
+            steamid = await self.utils.id_fetch(user)
+            loc = LOAS.find(steamid)
+            
+            if loc is None:
+                raise e.LOANotFound(f"LOA for user `{steamid}` not found.")
+
+            else:
+                LOAS.delete_row(loc.row)
+        
+        async def loa_edit(self, *, user: str, field: str, edit: str):
+            steamid = await self.utils.id_fetch(user)
+            loc = LOAS.find(steamid)
+
+            if loc is None:
+                raise e.LOANotFound(f"LOA for user `{steamid}` not found.")
+
+            else:
+                row = loc.row
+                col = self.conversions[field]
+                LOAS.update_cell(row, col, edit)
+
+        async def loa_fetch(self, *, user: int):
+            steamid = await self.utils.id_fetch(user)
+            loc = LOAS.find(steamid)
+
+            if loc is None:
+                raise e.LOANotFound(f"LOA for user `{steamid}` not found.")
+
+            else:
+                row_vals = LOAS.row_values(loc.row)
+                data = {
+                    'start' : row_vals[4],
+                    'end' : row_vals[5],
+                    'type' : row_vals[7]
+                }
+
+                return data
+            
 # https://discord.com/api/oauth2/authorize?client_id=1109688912026288168&permissions=8&scope=bot%20applications.commands

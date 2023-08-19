@@ -57,6 +57,12 @@ class Admin(commands.Cog):
         await self.client.tree.sync()
         await ctx.message.delete()
         await ctx.send('Command tree re-synced.', delete_after = 5)
-        
+
+    @commands.hybrid_command(name="jax", with_app_command=False)
+    async def jax(self, ctx: commands.Context):
+        # if ctx.author.id not in [395265117497065473, 484932458538860544]:
+        await ctx.message.delete()
+        await ctx.channel.send("https://tenor.com/view/star-wars-yeet-darth-vader-fallen-order-jedi-gif-24487821")
+       
 async def setup(client: commands.Bot) -> None:
     await client.add_cog(Admin(client))

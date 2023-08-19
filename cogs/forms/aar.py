@@ -61,7 +61,6 @@ class AARs(commands.GroupCog, name = "aar", description = "AAR Commandset."):
             log_id = datetime.now().strftime("%H%M%S%d%m%Y")
             embed = discord.Embed(title = f"{type} Logging", description = f"Logged by {logger.mention}.", timestamp = datetime.now())
             embed.set_author(name = "RC Logging Systems", icon_url = "https://i.imgur.com/3gTO5ie.png")
-            # embed.add_field(name = "Log Type", value = type, inline = False)
             embed.set_footer(text = f"LOG ID: {log_id}")
 
             if type == 'Lead' or type == 'Lead Spectate':
@@ -132,27 +131,33 @@ class AARs(commands.GroupCog, name = "aar", description = "AAR Commandset."):
                 embed.add_field(name = "Log Type", value = vals['TYPE'], inline = False)
                 embed.add_field(name = "Squads", value = vals['SQUADS'], inline = False)
                 embed.add_field(name = "Battalions", value = vals['BATTS'], inline = False)
-               
+                embed.add_field(name = "Additional Information", value = vals['ADD'], inline = False)
+
                 msg = await AAR_CH.send(embed = embed)
                 await UTILS.aar_create(vals['TYPE'], vals['SQUADS'], vals['BATTS'], msg_id=msg.id, log_id=log_id, log='Lore Activity', logger_id=logger.id, users=list(user.id for user in members))
 
             elif type == 'Basic Training':
-                if testee is None:
-                    await interaction.response.send_message("PVT name not provided. Use the optional `testee` parameter in the `/aar log` command.", ephemeral = True, delete_after = 15)
-                    return 1
+                # if testee is None:
+                #     await interaction.response.send_message("PVT name not provided. Use the optional `testee` parameter in the `/aar log` command.", ephemeral = True, delete_after = 15)
+                #     return 1
                 if bt is None:
                     await interaction.response.send_message("BT type not provided. Use the optional `bt` parameter in the `/aar log` command.", ephemeral = True, delete_after = 15)
                     return 1
                 elif bt not in self.bt:
                     await interaction.response.send_message("BT type unknown. Use the autofill options.", ephemeral = True, delete_after = 15)
                     return 1
+                
                 modal = Modals.BTModal()
                 await interaction.response.send_modal(modal)
                 await modal.wait()
+                await interaction.followup.send(content = 'Please select Private(s).', view = select, ephemeral = True)
+                await select.wait()
+
                 vals = modal.vals
+                members = select.members
 
                 embed.colour = discord.Colour.blue()
-                embed.add_field(name = "Private", value = testee.mention, inline = False)
+                embed.add_field(name = "Private(s)", value = ' '.join(list(testee.mention for testee in members)), inline = False)
                 embed.add_field(name = "Training", value = bt, inline = False)
                 embed.add_field(name = "Outcome", value = vals['OUTCOME'], inline = False)
                 embed.add_field(name = "Additional Information", value = vals['ADD'], inline = False)
@@ -185,7 +190,7 @@ class AARs(commands.GroupCog, name = "aar", description = "AAR Commandset."):
                 msg = await AAR_CH.send(embed = embed)
                 await UTILS.aar_create(str(testee.id), trial, vals['OUTCOME'], msg_id = msg.id, log_id = log_id, log = 'SGT Trials', logger_id = logger.id)
 
-            elif type == 'Spec Cert':
+            elif type == 'Spec Certs':
                 if testee is None:
                     await interaction.response.send_message("Testee name not provided. Use the optional `testee` parameter in the `/aar log` command.", ephemeral = True, delete_after = 15)
                     return 1
@@ -412,7 +417,7 @@ class Modals:
             self.vals['EVAL'] = self.evaluation.value
             self.stop()  
 
-    class TrainingModal(ui.Modal, title = "Trainnig Logging"):
+    class TrainingModal(ui.Modal, title = "Training Logging"):
         def __init__(self):
             super().__init__()
             self.custom_id = "id:TrainingModal"
@@ -441,6 +446,7 @@ class Modals:
         lore_type = ui.TextInput(label = "Log Type", style = discord.TextStyle.short, required = True)
         squads = ui.TextInput(label = "Squads Involved", style = discord.TextStyle.short, required = True)
         battalions = ui.TextInput(label = "Battalions Involved", style = discord.TextStyle.short, required = True)
+        additional = ui.TextInput(label = "Additional Information", style = discord.TextStyle.short, required = False)
 
         async def on_submit(self, interaction: discord.Interaction):
             await interaction.response.defer(ephemeral = True)
@@ -448,6 +454,7 @@ class Modals:
             self.vals['TYPE'] = self.lore_type.value
             self.vals['SQUADS'] = self.squads.value
             self.vals['BATTS'] = self.battalions.value
+            self.vals['ADD'] = self.additional.value if self.additional.value != '' else 'No Additional Information.'
             self.stop()
 
     class BTModal(ui.Modal, title = "Basic Training Logging"):
@@ -456,7 +463,7 @@ class Modals:
             self.custom_id = "id:BTModal"
             self.vals = {}
 
-        outcome = ui.TextInput(label = "Did the PVT pass or fail?", style = discord.TextStyle.short, placeholder = "Pass | Fail", required = True)
+        outcome = ui.TextInput(label = "Did the PVT(s) pass or fail?", style = discord.TextStyle.short, placeholder = "If one private fails and another passes, you may specify that here.", required = True)
         additional = ui.TextInput(label = "Any notes about their performance?", style = discord.TextStyle.long, required = False)
 
         async def on_submit(self, interaction: discord.Interaction):

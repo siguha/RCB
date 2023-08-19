@@ -1,9 +1,7 @@
 import discord
-import aiosqlite
 import asyncio
 from datetime import datetime
-import re
-from discord.ext import commands
+from discord.ext import commands, tasks
 from discord import app_commands, ui
 from utilities.exceptions import Exceptions
 from utilities.sheetutils import SheetUtilities
@@ -20,7 +18,6 @@ class LOAs(commands.GroupCog, name = "loa", description = "LOA commandset."):
         self.client.loop.create_task(self.background(self.client))
         self.utils = SheetUtilities.ProfileUtils()
         self.e = Exceptions()
-
         self.types = [
             'LOA',
             'ROA'
@@ -34,8 +31,10 @@ class LOAs(commands.GroupCog, name = "loa", description = "LOA commandset."):
     async def background(self, client: commands.Bot):
         await client.wait_until_ready()
         global LOA_CH 
-        guild = client.get_guild(333429464752979978)
-        LOA_CH = guild.get_channel(338196204234211339)
+        global GUILD
+        GUILD = client.get_guild(333429464752979978)
+        LOA_CH = GUILD.get_channel(338196204234211339)
+        self.loa_checkins.start()
 
     @app_commands.command(name = "request", description = "Request an absence.")
     async def loa_request(self, interaction: discord.Interaction, type: str, user: discord.Member = None) -> None:
@@ -100,7 +99,6 @@ class LOAs(commands.GroupCog, name = "loa", description = "LOA commandset."):
             embed.add_field(name = "Requested By", value = user.display_name, inline = False)
             embed.add_field(name = "Requester ID", value = str(user.id), inline = False)
             embed.add_field(name = "Edit Type", value = field, inline = False)
-            # embed.add_field(name = "\u200b", value = '\u200b', inline = False)
             if field == 'Start':
                 embed.add_field(name = "Old Start Date", value = old['start'], inline = True)
                 embed.add_field(name = "New Start Date", value = edit, inline = True)
@@ -126,6 +124,20 @@ class LOAs(commands.GroupCog, name = "loa", description = "LOA commandset."):
             app_commands.Choice(name = field, value = field)
             for field in self.fields if current.lower() in field.lower()
         ]
+    
+    @tasks.loop(hours = 12)
+    async def loa_checkins(self) -> None:
+        """Handles automatic checkins."""
+        expirations = await UTILS.loa_checkin()
+
+        for loa in expirations:
+            embed = discord.Embed(title='Absence Check-in', description=f'Your **{loa[3]}** ends in **{loa[2]} Days**, on **{loa[1]}**.\n\nWill you be returning, or do you require an extension?', colour=discord.Colour.red())
+            embed.add_field(name='Name', value=loa[4], inline=False)
+            embed.add_field(name='ID', value=loa[0], inline=False)
+            embed.set_author(name = "Unit Logistics", icon_url = "https://i.imgur.com/rgsTDEj.png")
+            embed.set_footer(text='Response Pending...')    
+
+            await LOA_CH.send(content=f"<@{loa[0]}>", embed=embed, view=Views.ReturnButtons())
 
 class Modals:
     class RequestModal(ui.Modal, title = 'LOA Request Form'):
@@ -140,11 +152,23 @@ class Modals:
     
         async def on_submit(self, interaction: discord.Interaction):
             await interaction.response.defer(ephemeral = True)
-            self.start.value
             self.vals['START'] = self.start.value
             self.vals['END'] = self.end.value
             self.vals['REASON'] = self.reason.value
             self.stop()
+
+    class ExtensionModal(ui.Modal, title = 'LOA Extension Form'):
+        def __init__(self):
+            super().__init__()
+            self.custom_id = 'id:ExtensionModal'
+            self.vals = {}
+
+        end = ui.TextInput(label = "End Date - (MM-DD-YY)", style = discord.TextStyle.short, placeholder = "End Date", default = "", required = True, max_length = 8)
+    
+        async def on_submit(self, interaction: discord.Interaction):
+            await interaction.response.defer(ephemeral = True)
+            self.vals['END'] = self.end.value
+            self.stop()        
 
 class Views:
     class RequestButtons(ui.View):
@@ -174,7 +198,7 @@ class Views:
 
             else:
                 try:
-                    await UTILS.loa_edit(user=fields[1].value, field=fields[2].value, edit=fields[5].value)
+                    await UTILS.loa_edit(user=fields[1].value, field='End', edit=fields[2].value)
                 
                 except e.LOANotFound as error:
                     await interaction.message.delete(delay = 15)
@@ -200,18 +224,40 @@ class Views:
         
         @discord.ui.button(label = "Return", style = discord.ButtonStyle.success, disabled = False, custom_id = 'persistent:ReturnButton')
         async def return_button(self, interaction: discord.Interaction, button: ui.Button):
-            await interaction.response.defer()
             embed = interaction.message.embeds[0]
             fields = embed.fields
             
-            if interaction.user.id == fields[1].value:
+            if str(interaction.user.id) == fields[1].value:
                 embed = discord.Embed(title = "Notice of Return", description=f"{interaction.user.mention} has returned to station. Welcome back, commando.", colour = discord.Colour.red(), timestamp = datetime.now())
                 embed.set_author(name = "Unit Logistics", icon_url="https://i.imgur.com/3gTO5ie.png")
-                await LOA_CH.send(embed = embed)
+                await interaction.message.edit(embed=embed, view=None)
                 await interaction.response.send_message("Return recorded. Welcome back.", ephemeral=True, delete_after=15)
 
             else:
-                await interaction.response.send_message("This is not your absence.", ephemeral=True, delete_after=15)
+                await interaction.response.send_message("This is not your checkin.", ephemeral=True, delete_after=15)
+
+        @discord.ui.button(label = "Extend", style = discord.ButtonStyle.blurple, disabled = False, custom_id = 'persistent:ExtendButton')
+        async def extend_button(self, interaction: discord.Interaction, button: ui.Button):
+            embed = interaction.message.embeds[0]
+            fields = embed.fields
+            
+            if str(interaction.user.id) == fields[1].value:
+                modal = Modals.ExtensionModal()
+                await interaction.response.send_modal(modal)
+                await modal.wait()
+                vals = modal.vals
+
+                embed = discord.Embed(title = "Extension Request", description=f"{interaction.user.mention} has requested an extension.", colour = discord.Colour.red(), timestamp = datetime.now())
+                embed.add_field(name='Requested By', value=fields[0].value, inline=False)
+                embed.add_field(name='Requestor ID', value=fields[1].value, inline=False)
+                embed.add_field(name='New End Date', value=vals['END'], inline=False)
+                embed.set_author(name = "Unit Logistics", icon_url="https://i.imgur.com/3gTO5ie.png")
+                embed.set_footer(text='Response Pending...')    
+                await interaction.message.edit(embed=embed, view=Views.RequestButtons())
+                await interaction.followup.send("Request Submitted.", ephemeral=True)
+
+            else:
+                await interaction.response.send_message("This is not your checkin.", ephemeral=True, delete_after=15)
 
 async def setup(client: commands.Bot) -> None:
     await client.add_cog(LOAs(client))

@@ -1,6 +1,9 @@
 import gspread
 import asyncio
 import aiosqlite
+import discord
+from typing import List
+from collections import deque
 from datetime import datetime
 from .exceptions import Exceptions
 
@@ -12,12 +15,42 @@ AARs = AAR.worksheet('AAR Logs')
 TRYOUTS = PUBLIC.worksheet('Tryouts')
 ROSTER = PUBLIC.worksheet('Roster')
 LOAS = PUBLIC.worksheet('LOA / ROA')
+SQUADS = PUBLIC.worksheet('Lore Squads')
 DATABASE = OFFICER.worksheet('Officer View')
 IDS = OFFICER.worksheet('IDs')
 e = Exceptions()
 
 class SheetUtilities:
     """Sheet utilities for the RCBot."""
+
+    class Paginator(discord.ui.View):
+        def __init__(self, embeds: List[discord.Embed]):
+            super().__init__(timeout=None)
+            self._embeds = embeds
+            self._queue = deque(embeds)
+            self._initial = embeds[0]
+            self._len = len(embeds)
+            self._current_page = 1
+
+        @discord.ui.button(emoji = "⬅️")
+        async def previous(self, interaction: discord.Interaction, _) -> None:
+            self._queue.rotate(1)
+            embed = self._queue[0]
+            await interaction.response.edit_message(embed = embed)
+        
+        @discord.ui.button(emoji = "➡️")
+        async def next(self, interaction: discord.Interaction, _) -> None:
+            self._queue.rotate(-1)
+            embed = self._queue[0]
+            await interaction.response.edit_message(embed = embed)
+
+        @property
+        def initial(self) -> discord.Embed:
+            return self._initial
+
+    def chunks(self, list, n) -> list:
+        n = max(1, n)
+        return (list[i:i+n] for i in range(0, len(list), n))
 
     async def id_fetch(self, did: int) -> str:
         db = await aiosqlite.connect('rcb.db')
@@ -71,7 +104,6 @@ class SheetUtilities:
         def __init__(self):
             # asyncio.run(self.db_connect())
             loop = asyncio.get_running_loop()
-
             loop.create_task(self.db_connect())
             self.utils = SheetUtilities()
 
@@ -134,6 +166,7 @@ class SheetUtilities:
                     'PROMO_DAYS' : vals[9],
                     'LOGS' : vals[12],
                     'PARTICIPATED' : vals[13],
+                    'TRYOUTS' : vals[14],
                     'TRAININGS' : vals[15],
                     'COHOSTS' : vals[16],
                     'LEADS' : vals[17],
@@ -172,6 +205,32 @@ class SheetUtilities:
                 }
 
                 return data
+
+    class OfficerUtils:
+        def __init__(self):
+            self.utils = SheetUtilities()
+
+        async def officer_vote(self, did: int):
+            loc = DATABASE.find(str(did))
+
+            if loc is None:
+                raise e.UserNotFound(f'DiscordID {did} not found in Officer Database.')
+
+            else:
+                row = loc.row
+                col = 21
+                DATABASE.update_cell(row, col, datetime.now().strftime('%m/%d/%Y'))
+
+        async def officer_warn(self, did: int):
+            loc = DATABASE.find(str(did))
+
+            if loc is None:
+                raise e.UserNotFound(f'DiscordID {did} not found in Officer Database.')
+
+            else:
+                row = loc.row
+                col = 11
+                DATABASE.update_cell(row, col, 'TRUE')
 
     class AarUtils:
         """AAR Utilities class of SheetUtilities."""
@@ -305,7 +364,7 @@ class SheetUtilities:
             if LOAS.find(steamid) is not None:
                 raise e.LOAExisting(f"User {steamid} has an existing LOA.")
             
-            LOAS.append_row([name, steamid, start_date, end_date, None, type, None, reason], value_input_option = 'USER_ENTERED', insert_data_option = 'OVERWRITE', table_range = f'C{last_row}:J{last_row}')
+            LOAS.append_row([name, steamid, start_date, end_date, None, type, None, reason, '0', str(user_id)], value_input_option = 'USER_ENTERED', insert_data_option = 'OVERWRITE', table_range = f'C{last_row}:J{last_row}')
 
         async def loa_end(self, *, user: int) -> bool:
             steamid = await self.utils.id_fetch(user)
@@ -328,6 +387,7 @@ class SheetUtilities:
                 row = loc.row
                 col = self.conversions[field]
                 LOAS.update_cell(row, col, edit)
+                LOAS.update_cell(row, 11, '0')
 
         async def loa_fetch(self, *, user: int):
             steamid = await self.utils.id_fetch(user)
@@ -345,5 +405,86 @@ class SheetUtilities:
                 }
 
                 return data
+        
+        async def loa_checkin(self):
+            active_loas = LOAS.col_values(9)
+            expirations = []
             
+            for index, loa in enumerate(active_loas):
+                try:
+                    if int(loa) <= 2:
+                        row_values = LOAS.row_values(index + 1)
+
+                        if row_values[10] == '0':
+                            LOAS.update_cell(index + 1, 11, '1')
+                            did, end, days, absence, name = row_values[11], row_values[5], row_values[8], row_values[7], row_values[2]
+                            expirations.append([did, end, days, absence, name])       
+
+                        else:
+                            pass         
+                except:
+                    pass
+            return expirations
+            
+    class MiscUtils:
+        """Misc Utilities class of SheetUtilities."""
+
+        def __init__(self):
+            self.utils = SheetUtilities()
+
+        async def trainer_fetch(self, spec: str = None):
+            __c = {
+                'a': 'Trainer+',
+                'b': 'Certified',
+                'c': 'Trainee',
+                '' : 'Uncertified'
+            }
+            __trainer_list_raw = ROSTER.get('D5:X')
+            trainer_list = []
+            # print([row[0] for row in __trainer_list_raw])
+            for row in __trainer_list_raw:
+                trainer_list.append([row[0], row[14], row[16], row[18], row[20]])
+                
+
+        async def squad_fetch(self, squad: str = None):
+            __squad_list_raw = SQUADS.batch_get(['B3:F6', 'B8:F11', 'B13:F16', 'B18:F21', 'B23:F26', 'B28:F31', 'B33:F36'])
+            __squad_list = [[item[0], item[4]] for sublist in __squad_list_raw for item in sublist]
+            pages = []
+            squad_names = {
+                0 : ['Foxtrot Squad', 'A squad of elite commandos lead by Gregor who supported and stood by members of the 212th Attack Battalion in a line up of hard fought victories. Specialized and war trained in calculated brute force blitz attack formations, composed of Gregor, Impact, Point and Hardwire.', discord.Colour.gold(), 'https://i.imgur.com/aPMJied.jpeg', 0, 4],
+                1 : ['Delta Squad', 'Delta Squad was an elite clone commando squad that carried out demanding missions for the Grand Army of the Republic during the Clone Wars, composed of Boss, Fixer, Scorch and Sev alongside Jedi companion Echuu Shen-Jon.', discord.Colour.from_rgb(230, 139, 3), 'https://i.imgur.com/FKInLWQ.jpeg', 4, 8],
+                2 : ['Omega Squad', 'Omega Squad are a clone commando unit who frequently were deployed on covert ops missions.The members of this unit were brought together after each of their respective squads were killed during action at Geonosis, composed of Niner, Atin, Darman, Fi and their Jedi companion Etain Tur-Mukan.', discord.Colour.from_rgb(11, 83, 148), 'https://i.imgur.com/U7gNRfC.jpeg', 8, 12],
+                3 : ['Ion Squad', 'Ion Team was a squad of clone commandos attached to the 22nd Air Combat Wing. They’re considered aces with spacecraft. Ion was trained by Cuy’val Dar and Corellians. On the server they act as pilots for RC or assist pilots if needed, composed of Climber, Unknown, Ras, Trace and Jedi companion Roan Shryne.', discord.Colour.light_grey(), 'https://i.imgur.com/iJulcAP.jpeg', 12, 16],
+                4 : ['Clone Force-99, informally dubbed the "Bad Batch"', 'Unofficially known as the "Bad Batch", this is a squad of clones with extreme genetic modifications that resulted in each clone having unique traits focused around their individual personalities. Infamous for their unorthodox technique and strategy, the squad was composed of Hunter with sensory abilities, Wrecker with incredible strength, Tech with enhanced mental capacity and intelligence, and Crosshair with unmatched marksmanship and eyesight.', discord.Colour.red(), 'https://i.imgur.com/JhkFmIv.png', 16, 20],
+                5 : ['Yayax Squad', 'Yayax is a squad of clone commandos specialized in covert urban warfare and night operations. This squad makes use of advanced Republic issued tools consisting of reinforced armor plating, opto-electronics, as well as secondary and tertiary lighting. Their performance in the Battle of Coruscant alongside Omega Squad sealed its legacy. They were one of the squads trained by Mandalorian Rav Bralor on the planet Kamino, composed of Cov, Jind, Yover, Dev and Jedi companion Naat Reath.', discord.Colour.from_rgb(139, 119, 75), 'https://i.imgur.com/7FfMSsb.jpeg', 20, 24],
+                6 : ['Aiwha Squad', "Aiwha is a squad of clone commandos specialized in guerrilla warfare. This squad routinely executed various avant-garde techniques and strategies to best their opponents in often irregular terrain, composed of Sarge, Zag, Tyto, Di'kut and Jedi companion Traavis.", discord.Colour.from_rgb(105, 141, 115), 'https://i.imgur.com/jmMmZs2.jpeg', 24, 28]
+            }   
+
+            if squad is None:
+                squad_list = list(self.utils.chunks(__squad_list, 4))
+                for n_chunk, chunk in enumerate(squad_list):
+                    text = ''
+                    for member in chunk:
+                        text += f'**{member[0]}**: {member[1] if member[1] != "Open" else "*Open*"}\n'
+                    embed = discord.Embed(title=squad_names[n_chunk][0], description=squad_names[n_chunk][1], colour=squad_names[n_chunk][2])
+                    embed.set_image(url=squad_names[n_chunk][3])
+                    embed.add_field(name='Squad Members', value=text)
+                    embed.set_author(name='Lore Squad Information', icon_url='https://i.imgur.com/rgsTDEj.png')
+                    pages.append(embed)
+            
+                return pages
+            else:
+                for key, value in squad_names.items():
+                    if squad in value[0]:
+                        text = ''
+                        for member in __squad_list[value[4]:value[5]]:
+                            text += f'**{member[0]}**: {member[1]}\n'
+                        
+                        embed = discord.Embed(title=value[0], description=value[1], colour=value[2])
+                        embed.set_image(url=value[3])
+                        embed.add_field(name='Squad Members', value=text)
+                        embed.set_author(name='Lore Squad Information', icon_url='https://i.imgur.com/rgsTDEj.png')
+
+                        return embed
+
 # https://discord.com/api/oauth2/authorize?client_id=1109688912026288168&permissions=8&scope=bot%20applications.commands

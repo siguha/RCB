@@ -41,11 +41,11 @@ class Officers(commands.GroupCog, name='officer', description='Officer comamndse
             return 1
         else:
             if interaction.channel_id == 692638901889663016:
-                embed = discord.Embed(title=f"{user.display_name} for {rank}", description=f"**Days at Rank:** {data['PROMO_DAYS']}\n**Total Logs**: {data['LOGS']}\n**Participated Logs**: {data['PARTICIPATED']}\n**Trainings Hosted**: {data['TRAININGS']}\n**Co-Hosts**: {data['COHOSTS']}\n**Leads**: {data['LEADS']}\n**SGT Trials**: {data['SGT_TRIALS']}\n**Basic Training**: {data['BT_TRIALS']}", colour=discord.Colour.red(), timestamp=datetime.datetime.now())
+                embed = discord.Embed(title=f"{user.display_name} for {rank}", description=f"Please use the thread below to vote.", colour=discord.Colour.red(), timestamp=datetime.datetime.now())
                 embed.set_author(name='Officer Vote', icon_url="https://i.imgur.com/rgsTDEj.png")
             
             elif interaction.channel_id == 766849519257124895:
-                embed = discord.Embed(title=f"{user.display_name} for {rank}", description=f"**Days at Rank:** {data['PROMO_DAYS']}\n**Total Logs**: {data['LOGS']}\n**Participated Logs**: {data['PARTICIPATED']}\n**Tryouts Hosted**: {data['TRYOUTS']}\n**Trainings Hosted**: {data['TRAININGS']}\n**Co-Hosts**: {data['COHOSTS']}\n**Leads**: {data['LEADS']}\n**SGT Trials**: {data['SGT_TRIALS']}\n**Basic Training**: {data['BT_TRIALS']}", colour=discord.Colour.red(), timestamp=datetime.datetime.now())
+                embed = discord.Embed(title=f"{user.display_name} for {rank}", description=f"Please use the thread below to vote.", colour=discord.Colour.red(), timestamp=datetime.datetime.now())
                 embed.set_author(name='High Command Vote', icon_url="https://i.imgur.com/rgsTDEj.png")
 
             embed.set_footer(text=f'Started by {interaction.user.display_name}', icon_url=interaction.user.display_avatar)
@@ -100,8 +100,11 @@ class Officers(commands.GroupCog, name='officer', description='Officer comamndse
                         content = (message.content[:300] + "...") if len(message.content) > 300 else message.content
                         time = message.created_at
                         time_f = time.strftime("%d-%m-%Y")
-                        if reactions[0]['count'] > reactions[1]['count']:
-                            passed.append(f"> `{time_f}` - {content}... **{reactions[0]['count']} Votes** for, **{reactions[1]['count']} against**. [[Jump!]]({message.jump_url})")
+                        try:
+                            if reactions[0]['count'] > reactions[1]['count']:
+                                passed.append(f"> `{time_f}` - {content}... **{reactions[0]['count']} Votes** for, **{reactions[1]['count']} against**. [[Jump!]]({message.jump_url})")
+                        except:
+                            pass
 
         embed = discord.Embed(title = "Pending Votes", color = discord.Colour.red(), timestamp = datetime.datetime.now())
         n = 1

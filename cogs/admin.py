@@ -12,6 +12,7 @@ class Admin(commands.Cog):
         super().__init__()
         self.client = client
         self.utils = SheetUtilities.ProfileUtils()
+        self.miscUtils = SheetUtilities.MiscUtils()
     
     @commands.hybrid_command(name = "load", with_app_command = False)
     async def load(self, ctx: commands.Context, *, module: str):
@@ -63,6 +64,20 @@ class Admin(commands.Cog):
         # if ctx.author.id not in [395265117497065473, 484932458538860544]:
         await ctx.message.delete()
         await ctx.channel.send("https://tenor.com/view/star-wars-yeet-darth-vader-fallen-order-jedi-gif-24487821")
-       
+
+    @commands.hybrid_command(name="spec aar", with_app_command=False)
+    async def spec(self, ctx: commands.Context):
+        await ctx.channel.send("## Logging a Spec AAR?\nGo into <#343795194333757441> and type `/aar`.\n\nSelect **Spec Certs** and **testee** as the optional parameter. Select whoever the testee was in the member select menu that pops up above.\n\nFill out the logging form as directed, and done.\n\n*If you make a mistake, you'll need to contact an NCO+ to get it fixed, alongside the necessary corrections.")
+
+    @commands.hybrid_command(name="lore aar", with_app_command=False)
+    async def lore(self, ctx: commands.Context):
+        await ctx.channel.send("## Logging a Lore AAR?\nGo into <#343795194333757441> and type `/aar`.\n\nSelect **Lore Activities**.\n\nFill out the logging form as directed.\n\nSelect the participants, being the RC present. If it was just yourself, you can select only yourself as the participant.\n\n*If you make a mistake, you'll need to contact an NCO+ to get it fixed, alongside the necessary corrections.")       
+
+    @commands.hybrid_command(name="retention", with_app_command=False)
+    async def retention(self, ctx: commands.Context):
+        data = await self.miscUtils.retention_fetch()
+
+        await ctx.channel.send(f"# Retention Stats\n**Analysis Period**: __{data['period']}__\n- **Headcount**: `{data['headcount']}`\n- **Prev. Headcount**: `{data['headcount_old']}`\n- **Intake**: `{data['intake']}`\n\n**Retention Rate**: `{data['retention']}`")
+
 async def setup(client: commands.Bot) -> None:
     await client.add_cog(Admin(client))

@@ -34,6 +34,7 @@ class AARs(commands.GroupCog, name = "aar", description = "AAR Commandset."):
             'Spec Training'
         ]
         self.trial = [
+            'Interview',
             'Defcon',
             'Breaching',
             'Event Lead',
@@ -49,7 +50,7 @@ class AARs(commands.GroupCog, name = "aar", description = "AAR Commandset."):
         AAR_CH = guild.get_channel(343795194333757441)
 
     @app_commands.command(name = 'log', description = 'Log an AAR.')
-    @app_commands.checks.has_any_role(333432642878046209, 333432981605580800, 452534405874057217)
+    @app_commands.checks.has_any_role(333432642878046209, 333432981605580800, 452534405874057217, 1079047145044324372, 1160706811343675524, 553564414930976773, 575925121835859979, 575925127766605825, 575925130824384532)
     async def aar_log(self, interaction: discord.Interaction, *, type: str, logger: discord.Member = None, bt: str = None, trial: str = None, cohost: discord.Member = None, lead: discord.Member = None, testee: discord.Member = None) -> None:
         if type not in self.types:
             await interaction.response.send_message(content = f'Type *{type}* does not exist. Try again.', ephemeral = True, delete_after = 5)
@@ -226,7 +227,7 @@ class AARs(commands.GroupCog, name = "aar", description = "AAR Commandset."):
                 embed.add_field(name = "New Members", value = vals['PASSED'], inline = False)
 
                 msg = await AAR_CH.send(embed = embed)
-                await UTILS.aar_create(logger.display_name, vals['REGION'], vals['ROLES'], vals['PASSED'], msg_id = msg.id, log_id = log_id, log = 'Tryout', logger_id = logger.id, users=list(member.id for member in members))
+                await UTILS.aar_create(logger.display_name, vals['REGION'], vals['ROLES'], vals['PASSED'], vals['NUM'], msg_id = msg.id, log_id = log_id, log = 'Tryout', logger_id = logger.id, users=list(member.id for member in members))
 
             await interaction.followup.send(content = f"AAR Logged. [Jump!]({msg.jump_url})", ephemeral = True)
 
@@ -515,6 +516,7 @@ class Modals:
 
         region = ui.TextInput(label = "Region", style = discord.TextStyle.short, required = True)
         roles = ui.TextInput(label = "Tryout Roles", style = discord.TextStyle.short, required = True)
+        num_passed = ui.TextInput(label = "Number Passed", style = discord.TextStyle.short, default="0", required = True)
         passed = ui.TextInput(label = "Who Passed?", style = discord.TextStyle.long, required = False)
 
         async def on_submit(self, interaction: discord.Interaction):
@@ -522,6 +524,7 @@ class Modals:
 
             self.vals['REGION'] = self.region.value
             self.vals['ROLES'] = self.roles.value
+            self.vals['NUM'] = self.num_passed.value
             self.vals['PASSED'] = self.passed.value
             self.stop()
 

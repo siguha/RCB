@@ -2,9 +2,10 @@ import gspread
 import asyncio
 import aiosqlite
 import discord
+import random
 from typing import List
 from collections import deque
-from datetime import datetime
+import datetime
 from .exceptions import Exceptions
 
 SA = gspread.service_account(filename = 'service_account.json')
@@ -17,6 +18,7 @@ ROSTER = PUBLIC.worksheet('Roster')
 LOAS = PUBLIC.worksheet('LOA / ROA')
 SQUADS = PUBLIC.worksheet('Lore Squads')
 DATABASE = OFFICER.worksheet('Officer View')
+POP = OFFICER.worksheet('Population')
 IDS = OFFICER.worksheet('IDs')
 e = Exceptions()
 
@@ -27,7 +29,6 @@ class SheetUtilities:
         def __init__(self, embeds: List[discord.Embed]):
             super().__init__(timeout=None)
             self._embeds = embeds
-            self._queue = deque(embeds)
             self._initial = embeds[0]
             self._len = len(embeds)
             self._current_page = 1
@@ -89,11 +90,11 @@ class SheetUtilities:
 
         return size
     
-    async def last_arr(self, did: int) -> tuple[datetime, int]:
-        steamid = await self.id_fetch(did)
-        row = AARs.find(steamid)
-        date = datetime.strptime(AARs.acell(f'A{row.row}').value, '%m/%d/%Y %H:%M:%S')
-        today = datetime.now()
+    async def last_arr(self, did: int) -> tuple[datetime.datetime, int]:
+        row = AARs.find(str(did))
+        print(row)
+        date = datetime.datetime.strptime(AARs.acell(f'A{row.row}').value, '%m/%d/%Y %H:%M:%S')
+        today = datetime.datetime.now()
         days = (today - date).days
 
         return date, days
@@ -159,24 +160,24 @@ class SheetUtilities:
                 raise e.UserNotFound('User not found in Officer Database.')
             
             else:
-                last_aar, days = await self.utils.last_arr(did)
+                # last_aar, days = await self.utils.last_arr(did)
                 vals = DATABASE.row_values(row.row)
                 data = {
-                    'PROMO_DATE' : vals[8],
-                    'PROMO_DAYS' : vals[9],
-                    'LOGS' : vals[12],
-                    'PARTICIPATED' : vals[13],
-                    'TRYOUTS' : vals[14],
-                    'TRAININGS' : vals[15],
-                    'COHOSTS' : vals[16],
-                    'LEADS' : vals[17],
-                    'SGT_TRIALS' : vals[18],
-                    'BT_TRIALS' : vals[19],
-                    'LAST_AAR' : last_aar.strftime("%m/%d/%Y %H:%M:%S"),
-                    'LAST_AAR_DAYS' : days,
-                    'LAST_SEEN' : vals[6],
-                    'LAST_SEEN_DAYS' : vals[7],
-                    'LOA' : vals[22]
+                    'PROMO_DATE' : vals[13],
+                    'PROMO_DAYS' : vals[14],
+                    'LOGS' : vals[17],
+                    'PARTICIPATED' : vals[18],
+                    'TRYOUTS' : vals[19],
+                    'TRAININGS' : vals[20],
+                    'COHOSTS' : vals[21],
+                    'LEADS' : vals[22],
+                    'SGT_TRIALS' : vals[23],
+                    'BT_TRIALS' : vals[24],
+                    'LAST_AAR' : vals[11],
+                    'LAST_AAR_DAYS' : vals[12],
+                    'LAST_SEEN' : vals[9],
+                    'LAST_SEEN_DAYS' : vals[10],
+                    'LOA' : vals[27]
                 }
 
                 return data
@@ -218,8 +219,8 @@ class SheetUtilities:
 
             else:
                 row = loc.row
-                col = 21
-                DATABASE.update_cell(row, col, datetime.now().strftime('%m/%d/%Y'))
+                col = 26
+                DATABASE.update_cell(row, col, datetime.datetime.now().strftime('%m/%d/%Y'))
 
         async def officer_warn(self, did: int):
             loc = DATABASE.find(str(did))
@@ -229,7 +230,7 @@ class SheetUtilities:
 
             else:
                 row = loc.row
-                col = 11
+                col = 16
                 DATABASE.update_cell(row, col, 'TRUE')
 
     class AarUtils:
@@ -267,14 +268,14 @@ class SheetUtilities:
             await db.commit()
             await db.close()
 
-            log_loc = AARs.find(str(log_id))
+            log_loc = AARs.find(str(log_id).zfill(14))
             try:
                 AARs.delete_row(log_loc.row)
 
             except AttributeError:
                 raise e.LogNotFound(f'LogID `{log_id}` not found in AAR sheet.')
 
-        async def aar_fetch(self, log_id: int):
+        async def aar_fetch(self, log_id: str):
             db = await aiosqlite.connect('rcb.db')
 
             async with db.cursor() as cursor:
@@ -286,49 +287,41 @@ class SheetUtilities:
 
         async def aar_create(self, *args, msg_id: int, log_id: int, log: str, logger_id: int, users: list[int] = None):
             await self.aar_cache(log_id, msg_id)
-            date = datetime.now().strftime("%m/%d/%Y %H:%M:%S")
+            date = datetime.datetime.now().strftime("%m/%d/%Y %H:%M:%S")
+            AARs.insert_row(values = [date, str(log_id), log, str(logger_id)], value_input_option = 'USER_ENTERED', index = 3)   
             
-            if log == 'Lead':
-                AARs.insert_row(values = [date, str(log_id), log, str(logger_id), args[0], args[1], args[2], args[3]], value_input_option = 'USER_ENTERED', index = 3)
-
-            elif log == 'Lead Spectate':
-                AARs.insert_row(values = [date, str(log_id), log, str(logger_id), args[0], args[1], args[2], args[3]], value_input_option = 'USER_ENTERED', index = 3)   
+            if log == 'Lead' or log == "Lead Spectate":
+                AARs.append_row(values = [str(args[4]), args[0], args[1], args[2], args[3]], value_input_option = 'USER_ENTERED', insert_data_option = 'OVERWRITE', table_range = 'E3:I3')
 
             elif log == 'Training':
-                AARs.insert_row(values = [date, str(log_id), log, str(logger_id)], value_input_option = 'USER_ENTERED', index = 3)   
-                AARs.append_row(values = [args[0], args[1], args[2], args[3], args[4]], value_input_option = 'USER_ENTERED', insert_data_option = 'OVERWRITE', table_range = 'I3:M3')
+                AARs.append_row(values = [args[0], args[1], args[2], args[3], args[4]], value_input_option = 'USER_ENTERED', insert_data_option = 'OVERWRITE', table_range = 'J3:N3')
             
             elif log == 'Lore Activity':
-                AARs.insert_row(values = [date, str(log_id), log, str(logger_id)], value_input_option = 'USER_ENTERED', index = 3)   
-                AARs.append_row(values = [args[0], args[1], args[2]], value_input_option = 'USER_ENTERED', insert_data_option = 'OVERWRITE', table_range = 'N3:P3')
+                AARs.append_row(values = [args[0], args[1], args[2]], value_input_option = 'USER_ENTERED', insert_data_option = 'OVERWRITE', table_range = 'O3:Q3')
 
             elif log == 'BT':
-                AARs.insert_row(values = [date, str(log_id), log, str(logger_id)], value_input_option = 'USER_ENTERED', index = 3)   
-                AARs.append_row(values = [args[0], args[1], args[2]], value_input_option = 'USER_ENTERED', insert_data_option = 'OVERWRITE', table_range = 'Q3:S3')               
+                AARs.append_row(values = [args[0], args[1], args[2]], value_input_option = 'USER_ENTERED', insert_data_option = 'OVERWRITE', table_range = 'R3:T3')               
 
             elif log == 'SGT Trials':
-                AARs.insert_row(values = [date, str(log_id), log, str(logger_id)], value_input_option = 'USER_ENTERED', index = 3)   
-                AARs.append_row(values = [args[0], args[1], args[2]], value_input_option = 'USER_ENTERED', insert_data_option = 'OVERWRITE', table_range = 'T3:V3')
+                AARs.append_row(values = [args[0], args[1], args[2]], value_input_option = 'USER_ENTERED', insert_data_option = 'OVERWRITE', table_range = 'U3:W3')
 
             elif log == 'Spec Cert':
-                AARs.insert_row(values = [date, str(log_id), log, str(logger_id)], value_input_option = 'USER_ENTERED', index = 3)   
-                AARs.append_row(values = [args[0], args[1], args[2]], value_input_option = 'USER_ENTERED', insert_data_option = 'OVERWRITE', table_range = 'W3:Y3')
+                AARs.append_row(values = [args[0], args[1], args[2]], value_input_option = 'USER_ENTERED', insert_data_option = 'OVERWRITE', table_range = 'X3:Z3')
 
             elif log == 'Tryout':
                 last_row = await self.utils.last_row(TRYOUTS)
-                date = datetime.now().strftime("%m/%d/%Y")
-                AARs.insert_row(values = [date, str(log_id), log, str(logger_id)], value_input_option = 'USER_ENTERED', index = 3)   
-                AARs.append_row(values = [args[1], args[2], args[3]], value_input_option = 'USER_ENTERED', insert_data_option = 'OVERWRITE', table_range = 'Z3:AB3')
-                TRYOUTS.append_row(values = [date, args[0], args[3], args[1], args[2]], value_input_option = 'USER_ENTERED', insert_data_option = 'OVERWRITE', table_range = f'B{int(last_row)}:F{int(last_row)}')
+                date = datetime.datetime.now().strftime("%m/%d/%Y")
+                AARs.append_row(values = [args[1], args[2], args[3]], value_input_option = 'USER_ENTERED', insert_data_option = 'OVERWRITE', table_range = 'AA3:AC3')
+                TRYOUTS.append_row(values = [date, args[0], args[3], args[4], args[1], args[2]], value_input_option = 'USER_ENTERED', insert_data_option = 'OVERWRITE', table_range = f'B{int(last_row)}:G{int(last_row)}')
 
             if users is not None:
-                col = 29
+                col = 30
                 for user in users:
                     AARs.update_cell(3, col, str(user))
                     col += 1
 
         async def aar_append(self, log_id: int, members: list[str]):
-            loc = AARs.find(str(log_id))
+            loc = AARs.find(str(log_id).zfill(14))
 
             if loc is None:
                 raise e.LogNotFound(f'LogID `{log_id}` not found in AAR sheet.')
@@ -342,7 +335,7 @@ class SheetUtilities:
                     col += 1
         
         async def aar_pop(self, log_id: int, user: int):
-            log_loc = AARs.find(str(log_id))
+            log_loc = AARs.find(str(log_id).zfill(14))
             row_vals = AARs.row_values(log_loc.row)
             col = row_vals.index(str(user)) + 1
             AARs.update_cell(log_loc.row, col, '')
@@ -432,6 +425,19 @@ class SheetUtilities:
         def __init__(self):
             self.utils = SheetUtilities()
 
+        async def retention_fetch(self):
+            __retention_stats = POP.get("A1:B31")
+            
+            data = {
+                'date' : __retention_stats[1][0],
+                'headcount' : __retention_stats[1][1],
+                'date_old' : __retention_stats[30][0],
+                'headcount_old' : __retention_stats[30][1],
+                'retention' : __retention_stats[0][0],
+            }
+
+            return data
+
         async def trainer_fetch(self, spec: str = None):
             __c = {
                 'a': 'Trainer+',
@@ -441,7 +447,7 @@ class SheetUtilities:
             }
             __trainer_list_raw = ROSTER.get('D5:X')
             trainer_list = []
-            # print([row[0] for row in __trainer_list_raw])
+
             for row in __trainer_list_raw:
                 trainer_list.append([row[0], row[14], row[16], row[18], row[20]])
                 
@@ -487,4 +493,158 @@ class SheetUtilities:
 
                         return embed
 
-# https://discord.com/api/oauth2/authorize?client_id=1109688912026288168&permissions=8&scope=bot%20applications.commands
+    class SquadUtils: 
+        """Squad Utilities class of SheetUtilities."""
+        
+        def __init__(self):
+            loop = asyncio.get_running_loop()
+            loop.create_task(self.db_connect())
+            self.utils = SheetUtilities()
+
+        async def db_connect(self) -> None:
+            db = await aiosqlite.connect('rcb.db')
+
+            async with db.cursor() as cursor:
+                await cursor.execute('''CREATE TABLE IF NOT EXISTS squads (name TEXT PRIMARY KEY,
+                                    role INTEGER,
+                                    channel INTEGER,
+                                    mem1 INTEGER,
+                                    mem2 INTEGER,
+                                    mem3 INTEGER,
+                                    mem4 INTEGER,
+                                    mem5 INTEGER)''')
+
+            await db.commit()
+            await db.close()
+
+        async def squad_builder(self, guild: discord.Guild) -> None:
+            db = await aiosqlite.connect('rcb.db')
+            _squad_list = list(set([item for sublist in DATABASE.get("E4:E") for item in sublist if item]))
+            _user_list = [user for user in DATABASE.get("E4:G") if user[0]]        
+
+            for squad in _squad_list:
+                placeholder = []
+
+                for user in _user_list:
+                    if squad in user:
+                        placeholder.append(user[2])
+
+                if len(placeholder) < 3:
+                    continue
+                
+                else:
+                    while len(placeholder) < 5:
+                        placeholder.append(None)
+
+                    if discord.utils.get(guild.channels, name=f"{squad.lower()}-squad") is not None:
+                        async with db.cursor() as cursor:
+                            await cursor.execute('''SELECT mem1, mem2, mem3, mem4, mem5 FROM squads WHERE name = ?''', (squad,))
+                            existing = await cursor.fetchone()
+
+                            await cursor.execute('''INSERT INTO squads (name, role, channel, mem1, mem2, mem3, mem4, mem5) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                                                ON CONFLICT(name) DO
+                                                UPDATE SET mem1 = excluded.mem1, mem2 = excluded.mem2, mem3 = excluded.mem3, mem4 = excluded.mem4, mem5 = excluded.mem5
+                                                ''', (squad, None, None, placeholder[0], placeholder[1], placeholder[2], placeholder[3], placeholder[4]))
+                        
+                            await db.commit()
+                            await cursor.close()
+
+                        squad_role = discord.utils.get(guild.roles, name=f"{squad} Squad")
+
+                        try:
+                            for id in existing:
+                                if str(id) not in placeholder and id is not None:
+                                    print(f"ID NOT FOUND: {id} - {guild.get_member(int(id)).display_name}\n")
+                                    await guild.get_member(int(id)).remove_roles(squad_role)
+                        
+                        except ValueError as e:
+                            print(f'{e.__class__.__name__}: {e}')
+                            pass
+                    
+                    else:
+                        squad_role = await guild.create_role(name=f"{squad} Squad")
+                        cat = discord.utils.get(guild.categories, id=1164281181529985044)
+                        overwrites = {
+                            guild.default_role: discord.PermissionOverwrite(view_channel=False, read_messages=False),
+                            squad_role: discord.PermissionOverwrite(view_channel=True, read_messages=True),
+                            guild.get_role(842312625735860255): discord.PermissionOverwrite(view_channel=True, read_messages=True),
+                            guild.get_role(333432981605580800): discord.PermissionOverwrite(view_channel=True, read_messages=True, manage_channels=True),
+                        }
+                        squad_ch = await cat.create_text_channel(name=f"{squad} Squad", overwrites=overwrites)
+                        await squad_ch.send(f"# {squad}'s Communication Frequency\n### FREQUENCY HASH CODE #03-{random.randint(1,999)}-{random.randint(1000,9999)}\n\n<@&{squad_role.id}> - Welcome to your communications hub, a channel frequency provided to you by the 03 Commando Battalion. This is where you'll communicate amongst yourselves.\n\nThis frequency will be scrambled after:\n- **Two weeks of message inactivity + having less than 3 squad members.**\n- **Dropping to 0 squad members.**\n\n**If you have questions, please contact an <@&842312625735860255>+.**")
+
+                        async with db.cursor() as cursor:
+                            await cursor.execute('''INSERT INTO squads (name, role, channel, mem1, mem2, mem3, mem4, mem5) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                                                ON CONFLICT(name) DO
+                                                UPDATE SET name = excluded.name, role = excluded.role, channel = excluded.channel, mem1 = excluded.mem1, mem2 = excluded.mem2, mem3 = excluded.mem3, mem4 = excluded.mem4, mem5 = excluded.mem5
+                                                ''', (squad, squad_role.id, squad_ch.id, placeholder[0], placeholder[1], placeholder[2], placeholder[3], placeholder[4]))  
+
+                            await db.commit()
+                            await cursor.close()
+
+                    for id in placeholder:
+                        if id is not None:
+                            try:
+                                await guild.get_member(int(id)).add_roles(squad_role)
+                            except:
+                                pass
+
+            await db.commit()
+            await db.close()
+
+            await self.squad_checker(guild)
+
+        async def squad_checker(self, guild: discord.Guild) -> None:
+            db = await aiosqlite.connect('rcb.db')
+            _active_squad_list = list(set([item for sublist in DATABASE.get("E4:E") for item in sublist if item]))
+            _deleted = []
+
+            async with db.cursor() as cursor:
+                await cursor.execute('''SELECT * FROM squads''')
+                _old_squad_list = await cursor.fetchall()
+
+                await cursor.close()
+
+            for squad in _old_squad_list:
+                role = guild.get_role(int(squad[1]))
+                channel = guild.get_channel(int(squad[2]))
+
+                if squad[0] not in _active_squad_list:
+                    try:
+                        await role.delete(reason="Squad is empty.")
+                    
+                    except: pass
+                    try:
+                        await channel.delete(reason="Squad is empty.")
+                        _deleted.append(squad[0])
+                    
+                    except: pass
+
+                    async with db.cursor() as cursor:
+                            await cursor.execute('''DELETE FROM squads WHERE name = ?''', (squad[0],))
+                            await db.commit()             
+                
+                else:
+                    async for message in channel.history(limit=1):
+                        date = message.created_at
+                        today = datetime.datetime.now(datetime.timezone.utc)
+                        delta = today - date
+
+                    if int(delta.days) >= 14:
+                        member_count = squad.count(None)
+
+                        if member_count <= 2:
+                            await channel.delete(reason="2 Week+ Inactivity -2 Members.")
+                            await role.delete(reason="2 Week+ Inactivity -2 Members.")
+                            _deleted.append(squad[0])
+
+                            async with db.cursor() as cursor:
+                                    await cursor.execute('''DELETE FROM squads WHERE name = ?''', (squad[0],))
+                                    await db.commit()
+            
+            sgm_channel = guild.get_channel(946095177695653988)
+            if len(_deleted) == 0:
+                pass
+            else:
+                await sgm_channel.send(content=f"# Channel Purge\n\nThe following channels were purged either for inactivity or zero memebers:\n\n {', '.join(_deleted)}\n\n**If this was a mistake, please ping Officer+.**")
+            await db.close()

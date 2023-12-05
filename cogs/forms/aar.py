@@ -51,7 +51,7 @@ class AARs(commands.GroupCog, name = "aar", description = "AAR Commandset."):
 
     @app_commands.command(name = 'log', description = 'Log an AAR.')
     @app_commands.checks.has_any_role(333432642878046209, 333432981605580800, 452534405874057217, 1079047145044324372, 1160706811343675524, 553564414930976773, 575925121835859979, 575925127766605825, 575925130824384532)
-    async def aar_log(self, interaction: discord.Interaction, *, type: str, logger: discord.Member = None, bt: str = None, trial: str = None, cohost: discord.Member = None, lead: discord.Member = None, testee: discord.Member = None) -> None:
+    async def aar_log(self, interaction: discord.Interaction, *, type: str, logger: discord.Member = None, bt: str = None, trial: str = None, cohost: discord.Member = None, lead: discord.Member = None, testee: discord.Member = None, gm: discord.Member = None) -> None:
         if type not in self.types:
             await interaction.response.send_message(content = f'Type *{type}* does not exist. Try again.', ephemeral = True, delete_after = 5)
         else:
@@ -86,6 +86,7 @@ class AARs(commands.GroupCog, name = "aar", description = "AAR Commandset."):
                 vals = modal.vals
                 members = select.members
                 embed.insert_field_at(0, name = "Attendees", value = ' '.join(list(member.mention for member in members)), inline = False)
+                embed.add_field(name="Gamemaster", value=gm.mention if gm is not None else "N/A", inline=False)
                 embed.add_field(name = "Squad Roles", value = vals['ROLES'], inline = False)
                 embed.add_field(name = "Event Summary", value = vals['SUMMARY'], inline = False)
                 embed.add_field(name = "Squad Performance", value = vals['PERFORMANCE'], inline = False)
@@ -94,7 +95,7 @@ class AARs(commands.GroupCog, name = "aar", description = "AAR Commandset."):
                     embed.add_field(name = "Lead Evaluation", value = vals['EVAL'], inline = False)
             
                 msg = await AAR_CH.send(embed = embed)
-                await UTILS.aar_create(str(lead.id) if lead is not None else '', vals['ROLES'], vals['SUMMARY'], vals['PERFORMANCE'], msg_id=msg.id, log_id=log_id, log='Lead' if type == 'Lead' else 'Lead Spectate', logger_id=logger.id, users=list(user.id for user in members))
+                await UTILS.aar_create(str(lead.id) if lead is not None else '', vals['ROLES'], vals['SUMMARY'], vals['PERFORMANCE'], gm.id if gm is not None else '', msg_id=msg.id, log_id=log_id, log='Lead' if type == 'Lead' else 'Lead Spectate', logger_id=logger.id, users=list(user.id for user in members))
 
             elif type == 'Training':
                 modal = Modals.TrainingModal()
@@ -138,9 +139,6 @@ class AARs(commands.GroupCog, name = "aar", description = "AAR Commandset."):
                 await UTILS.aar_create(vals['TYPE'], vals['SQUADS'], vals['BATTS'], msg_id=msg.id, log_id=log_id, log='Lore Activity', logger_id=logger.id, users=list(user.id for user in members))
 
             elif type == 'Basic Training':
-                # if testee is None:
-                #     await interaction.response.send_message("PVT name not provided. Use the optional `testee` parameter in the `/aar log` command.", ephemeral = True, delete_after = 15)
-                #     return 1
                 if bt is None:
                     await interaction.response.send_message("BT type not provided. Use the optional `bt` parameter in the `/aar log` command.", ephemeral = True, delete_after = 15)
                     return 1
@@ -247,7 +245,7 @@ class AARs(commands.GroupCog, name = "aar", description = "AAR Commandset."):
 
     @app_commands.command(name = 'edit', description = 'Edit an AAR.')
     @app_commands.checks.has_any_role(333432642878046209, 333432981605580800, 452534405874057217)
-    async def aar_edit(self, interaction: discord.Interaction, log_id: int):
+    async def aar_edit(self, interaction: discord.Interaction, log_id: str):
         msg_id = await UTILS.aar_fetch(log_id)
         msg = await AAR_CH.fetch_message(msg_id)
         embed = msg.embeds[0]
@@ -265,7 +263,7 @@ class AARs(commands.GroupCog, name = "aar", description = "AAR Commandset."):
     
     @app_commands.command(name = 'append', description = 'Append a user to the end of an AAR.')
     @app_commands.checks.has_any_role(333432642878046209, 333432981605580800, 452534405874057217)
-    async def aar_append(self, interaction: discord.Interaction, log_id: int):
+    async def aar_append(self, interaction: discord.Interaction, log_id: str):
         embed = discord.Embed(title = "AAR Appending Tool", description = "Please select member(s) from below to add to your AAR.\n\n*If you misclick out of the select menu and cancel the command, you can always re-run this command.*", colour = discord.Colour.red())
         select = Views.MemberSelect()
         await interaction.response.send_message(embed = embed, view = select, ephemeral = True)

@@ -61,7 +61,6 @@ class Admin(commands.Cog):
 
     @commands.hybrid_command(name="jax", with_app_command=False)
     async def jax(self, ctx: commands.Context):
-        # if ctx.author.id not in [395265117497065473, 484932458538860544]:
         await ctx.message.delete()
         await ctx.channel.send("https://tenor.com/view/star-wars-yeet-darth-vader-fallen-order-jedi-gif-24487821")
 

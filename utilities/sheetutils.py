@@ -517,6 +517,28 @@ class SheetUtilities:
             await db.commit()
             await db.close()
 
+        async def squad_rename(self, guild: discord.Guild, squad: str, name: str) -> None:
+            db = await aiosqlite.connect('rcb.db')
+
+            async with db.cursor() as cursor:
+                await cursor.execute('''SELECT * FROM squads WHERE name = ?''', (squad.capitalize(),))
+                data = await cursor.fetchone()
+                print(data)
+
+                if data is None:
+                    raise e.SquadNotFound("Squad not found in database table.")
+                
+                else:
+                    await cursor.execute('''UPDATE squads SET name = ? WHERE name = ?''', (name.capitalize(), squad.capitalize()))
+
+            await cursor.close()
+            await db.commit()
+
+            role = guild.get_role(data[1])
+            channel = guild.get_channel(data[2])
+            await role.edit(name=f"{name.capitalize()} Squad")
+            await channel.edit(name=f"{name.lower()}-squad")
+
         async def squad_builder(self, guild: discord.Guild) -> None:
             db = await aiosqlite.connect('rcb.db')
             _squad_list = list(set([item for sublist in DATABASE.get("E4:E") for item in sublist if item]))

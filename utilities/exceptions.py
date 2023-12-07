@@ -14,3 +14,7 @@ class Exceptions:
     class LOAExisting(Exception):
         """Raised when a user has an active LOA."""
         pass
+
+    class SquadNotFound(Exception):
+        """Raised when a squad being queried for is not found."""
+        pass

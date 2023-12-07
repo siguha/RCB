@@ -40,23 +40,12 @@ class Misc(commands.Cog):
             embed = await M_UTILS.squad_fetch(squad)
             await interaction.followup.send(embed=embed)
 
-    # @app_commands.command(name='trainers', description='Fetch a list of trainers.')
-    # async def trainers(self, interaction: discord.Interaction, spec: str = None):
-    #     await M_UTILS.trainer_fetch()
-
     @squads.autocomplete('squad')
     async def squad_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
         return [
             app_commands.Choice(name = squad, value = squad)
             for squad in self.squad_list if current.lower() in squad.lower()
         ]
-
-    # @trainers.autocomplete('spec')
-    # async def trainers_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
-    #     return [
-    #         app_commands.Choice(name = spec, value = spec)
-    #         for spec in self.spec_list if current.lower() in spec.lower()
-    #     ]
-
+    
 async def setup(client: commands.Bot) -> None:
     await client.add_cog(Misc(client))

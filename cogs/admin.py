@@ -80,26 +80,34 @@ class Admin(commands.Cog):
     async def retention(self, ctx: commands.Context):
         data = await self.miscUtils.retention_fetch()
 
-        await ctx.channel.send(f"# Retention Stats\n**Analysis Period**: __{data['period']}__\n- **Headcount**: `{data['headcount']}`\n- **Prev. Headcount**: `{data['headcount_old']}`\n- **Intake**: `{data['intake']}`\n\n**Retention Rate**: `{data['retention']}`")
+        await ctx.channel.send(f"# Retention Stats\n**Analysis Period**: __{data['date']} - {data['date_old']}__\n- **Headcount**: `{data['headcount']}`\n- **Prev. Headcount**: `{data['headcount_old']}`\n\n**Retention Rate**: `{data['retention']}`")
 
     @commands.hybrid_command(name="chaind", with_app_command=False)
     @app_commands.checks.has_any_role(333432981605580800, 452534405874057217)
-    async def chain_delete(self, ctx: commands.Context, *args: str):
-        not_found = []
-        not_found_count = 0
+    async def chain_delete(self, ctx: commands.Context, *args: int):
+        try:
+            if args[0] <= 100:
+                await ctx.channel.purge(limit=args[0])
+                await ctx.send(f"Deleting the last **{args[0]}** Messages from cur. channel.", delete_after=15)
 
-        for arg in args:
-            try:
-                message = await ctx.fetch_message(arg)
-                await message.delete()
+            else:
+                not_found = []
+                not_found_count = 0
 
-            except Exception as e:
-                not_found_count += 1
-                not_found.append(f'\n- `{arg}: {e.__class__.__name__}`')
-        
-        deleted_count = len(args) - not_found_count
-        
-        await ctx.send(f"**{len(args)}** Message IDs processed, **{deleted_count if deleted_count > 0 else 0}** Messages deleted, **{not_found_count}** Message IDs not found.\n\nMissing IDs: {''.join(not_found)}")
+                for arg in args:
+                    try:
+                        message = await ctx.fetch_message(arg)
+                        await message.delete()
 
+                    except Exception as e:
+                        not_found_count += 1
+                        not_found.append(f'\n- `{arg}: {e.__class__.__name__}`')
+                
+                deleted_count = len(args) - not_found_count
+                
+                await ctx.send(f"**{len(args)}** Message IDs processed, **{deleted_count if deleted_count > 0 else 0}** Messages deleted, **{not_found_count}** Message IDs not found.\n\n{''.join(not_found)}", delete_after=15)
+        except:
+            await ctx.send("Invalid command usage. `!chaind *MSG IDs/Purge Count`.")
+            
 async def setup(client: commands.Bot) -> None:
     await client.add_cog(Admin(client))

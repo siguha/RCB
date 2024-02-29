@@ -55,6 +55,10 @@ class Profiles(commands.GroupCog, name = "profile", description = "Profile comma
     async def profile_view(self, interaction: discord.Interaction, user: discord.Member) -> None:
         await interaction.response.defer()
 
+        nco_channels = [353958040648810510, 409270453836840960, 1149776758514667652]
+        officer_channels = [333436275942096896, 692638901889663016, 1150110812522958929]
+        command_channels = [1066417938644615249, 766849519257124895, 1150113667652788335, 845979536733765692]
+
         if user is None:
             user = interaction.user
 
@@ -64,68 +68,43 @@ class Profiles(commands.GroupCog, name = "profile", description = "Profile comma
         except self.e.UserNotFound as e:
             await interaction.followup.send(content = f"{e.__class__.__name__}: {e}")
             return 1
+        
+        if interaction.channel_id == 1079463193958678648:
+            embed = discord.Embed(title = "Clone Commando Identification Card", description = f"Showing reports for **{data['RANK']} {data['NAME']}** (`{data['STEAMID']}`), currently stationed aboard the RSD Liberator...\n\u200b", color = discord.Colour.red())
+            embed.add_field(name = "Batch Information", value = f"\n- **Callsign**: {data['CLASS']}\n- **Deployed On**: {data['JOINED']}, {data['DAYS_IN']} Rotations Ago.\n- **Last Checkin**: {data['DAYS_SINCE']} Rotations Ago.\n- **Last Report**: {data['LAST_AAR_DAYS']} Rotations Ago.\n\u200b")
+            embed.add_field(name = "Specializations Sheet", value = f"- **Demolitions**: {data['DEMO']}\n- **Engineering**: {data['ENGINEER']}\n- **Field Medicine**: {data['MEDIC']}\n- **Marksmanship**: {data['SNIPER']}\n\u200b", inline = False)
+            embed.add_field(name="Qualifications Sheet", value=f"- **Basic Training (BT)**: {data['BT']}\n- **Squad Lead Training (SLT)**: {data['SLT']}\n- **Raider Training (RDT)**: {data['RDT']}")
+            embed.set_author(name = "GAR CCID", icon_url = "https://i.imgur.com/rgsTDEj.png")
+            embed.set_footer(text = f"File Accessed by {user.display_name}", icon_url=user.display_avatar)
 
-        embed = discord.Embed(title = "Clone Commando Identification Card", description = f"Showing reports for **{data['RANK']} {data['NAME']}**, currently stationed aboard the RSD Liberator....\n\u200b", color = discord.Colour.red())
-        embed.add_field(name = "Batch Information", value = f"\n**Callsign**: {data['CLASS']}\n**Deployed on**: {data['JOINED']}, {data['DAYS_IN']} Rotations ago.\n**Last Checkin**: {data['DAYS_SINCE']} Days Ago.\n**Region**: {data['REGION']}\n\u200b")
-        embed.add_field(name = "Certifications Sheet", value = f"\n**Demolitions**: {data['DEMO']}\n**Engineering**: {data['ENGINEER']}\n**Field Medicine**: {data['MEDIC']}\n**Marksmanship**: {data['SNIPER']}\n\n", inline = False)
-        embed.set_author(name = "GAR CCID", icon_url = "https://i.imgur.com/rgsTDEj.png")
-        embed.set_footer(text = f"File Accessed by {user.display_name}", icon_url=user.display_avatar)
+            await interaction.followup.send(embed=embed)
 
-        await interaction.followup.send(embed = embed)
+        elif interaction.channel_id in nco_channels:
+            embed = discord.Embed(title = "NCO Stats Viewer", description = f"- Last Seen on **{data['LAST_SEEN']}**, **{data['LAST_SEEN_DAYS']}** days ago.\n- Last Promoted on **{data['PROMO_DATE']}**, **{data['PROMO_DAYS']}** days ago.\n- Last AAR on **{data['LAST_AAR']}**, **{data['LAST_AAR_DAYS']}** days ago.\n- Current Activity Status: `{data['LOA']}`\n\u200b", timestamp = datetime.now(), color = discord.Colour.dark_green())
+            embed.set_author(name = f"{user.display_name}'s Stats Summary", icon_url = "https://i.imgur.com/rgsTDEj.png")
+            embed.add_field(name = "Logging Stats", value = f"- **Total Logs**: {data['LOGS']}\n- **Participated Logs**: {data['PARTICIPATED']}\n- **Leads**: {data['LEADS']}\n\u200b", inline = False)
+            embed.add_field(name="Qualifications Sheet", value=f"- **Basic Training (BT)**: {data['BT']}\n- **Squad Lead Training (SLT)**: {data['SLT']}\n- **Raider Training (RDT)**: {data['RDT']}", inline = False)
+            embed.set_footer(text = "DO NOT DISCLOSE THIS INFORMATION.")
 
-    @app_commands.command(name = "nco", description = "Check an Enlisted's profile.")
-    @app_commands.checks.has_any_role(452534405874057217, 333432981605580800, 333432642878046209)
-    async def profile_nco(self, interaction: discord.Interaction, user: discord.Member) -> None:
-        try:
-            data = await self.utils.stats_fetch(user.id)
+            await interaction.followup.send(embed=embed)
 
-        except self.e.UserNotFound as e:
-            await interaction.response.send_message(content = f"{e.__class__.__name__}: {e}")
-            return 1
+        elif interaction.channel_id in officer_channels:
+            embed = discord.Embed(title = "Officer Stats Viewer", description = f"- Last Seen on **{data['LAST_SEEN']}**, **{data['LAST_SEEN_DAYS']}** days ago.\n- Last Promoted on **{data['PROMO_DATE']}**, **{data['PROMO_DAYS']}** days ago.\n- Last AAR on **{data['LAST_AAR']}**, **{data['LAST_AAR_DAYS']}** days ago.\n- Current Activity Status: `{data['LOA']}`\n\u200b", timestamp = datetime.now(), color = discord.Colour.yellow())
+            embed.set_author(name = f"{user.display_name}'s Stats Summary", icon_url = "https://i.imgur.com/rgsTDEj.png")
+            embed.add_field(name = "Logging Stats", value = f"- **Total Logs**: {data['LOGS']}\n- **Participated Logs**: {data['PARTICIPATED']}\n- **Trainings Hosted**: {data['TRAININGS']}\n- **Co-Hosts**: {data['COHOSTS']}\n- **Leads**: {data['LEADS']}\n- **SGT Trials**: {data['SGT_TRIALS']}\n- **Basic Training**: {data['BT_TRIALS']}\n\u200b", inline = False)
+            embed.add_field(name="Qualifications Sheet", value=f"- **Basic Training (BT)**: {data['BT']}\n- **Squad Lead Training (SLT)**: {data['SLT']}\n- **Raider Training (RDT)**: {data['RDT']}", inline = False)
+            embed.set_footer(text = "DO NOT DISCLOSE THIS INFORMATION.\n")
 
-        embed = discord.Embed(title = "NCO Stats Viewer", description = f"Last Seen on **{data['LAST_SEEN']}**, **{data['LAST_SEEN_DAYS']}** days ago.\n\nLast Promoted on **{data['PROMO_DATE']}**, **{data['PROMO_DAYS']}** days ago.\n\nLast AAR on **{data['LAST_AAR']}**, **{data['LAST_AAR_DAYS']}** days ago.\n\nCurrent Activity Status: `{data['LOA']}`", timestamp = datetime.now(), color = discord.Colour.dark_green())
-        embed.set_author(name = f"{user.display_name}'s Stats Summary", icon_url = "https://i.imgur.com/rgsTDEj.png")
-        embed.add_field(name = "Logging Stats", value = f"**Total Logs**: {data['LOGS']}\n**Participated Logs**: {data['PARTICIPATED']}\n**Leads**: {data['LEADS']}")
-        embed.set_footer(text = "DO NOT DISCLOSE THIS INFORMATION.")
+            await interaction.followup.send(embed=embed)
 
-        await interaction.response.send_message(embed = embed, delete_after = 45)
+        elif interaction.channel_id in command_channels:
+            embed = discord.Embed(title = "Commmand Stats Viewer", description = f"- Last Seen on **{data['LAST_SEEN']}**, **{data['LAST_SEEN_DAYS']}** days ago.\n- Last Promoted on **{data['PROMO_DATE']}**, **{data['PROMO_DAYS']}** days ago.\n- Last AAR on **{data['LAST_AAR']}**, **{data['LAST_AAR_DAYS']}** days ago.\n- Current Activity Status: `{data['LOA']}`\n\u200b", timestamp = datetime.now(), color = discord.Colour.yellow())
+            embed.set_author(name = f"{user.display_name}'s Stats Summary", icon_url = "https://i.imgur.com/rgsTDEj.png")
+            embed.add_field(name = "Logging Stats", value = f"- **Total Logs**: {data['LOGS']}\n- **Participated Logs**: {data['PARTICIPATED']}\n- **Trainings Hosted**: {data['TRAININGS']}\n- **Tryouts Hosted**: {data['TRYOUTS']}\n- **Co-Hosts**: {data['COHOSTS']}\n- **Leads**: {data['LEADS']}\n- **SGT Trials**: {data['SGT_TRIALS']}\n- **Basic Training**: {data['BT_TRIALS']}\n\u200b", inline = False)
+            embed.add_field(name="Qualifications Sheet", value=f"- **Basic Training (BT)**: {data['BT']}\n- **Squad Lead Training (SLT)**: {data['SLT']}\n- **Raider Training (RDT)**: {data['RDT']}", inline = False)
+            embed.set_footer(text = "DO NOT DISCLOSE THIS INFORMATION.\n")
 
-    @app_commands.command(name = "officer", description = "Check an NCO's profile.")
-    @app_commands.checks.has_any_role(333432981605580800, 452534405874057217)
-    async def profile_officer(self, interaction: discord.Interaction, user: discord.Member) -> None:
-        await interaction.response.defer(ephemeral=True)
-        try:
-            data = await self.utils.stats_fetch(user.id)
-
-        except self.e.UserNotFound as e:
-            await interaction.followup.send(content = f"{e.__class__.__name__}: {e}")
-            return 1
-
-        embed = discord.Embed(title = "Officer Stats Viewer", description = f"Last Seen on **{data['LAST_SEEN']}**, **{data['LAST_SEEN_DAYS']}** days ago.\n\nLast Promoted on **{data['PROMO_DATE']}**, **{data['PROMO_DAYS']}** days ago.\n\nLast AAR on **{data['LAST_AAR']}**, **{data['LAST_AAR_DAYS']}** days ago.\n\nCurrent Activity Status: `{data['LOA']}`", timestamp = datetime.now(), color = discord.Colour.yellow())
-        embed.set_author(name = f"{user.display_name}'s Stats Summary", icon_url = "https://i.imgur.com/rgsTDEj.png")
-        embed.add_field(name = "Logging Stats", value = f"**Total Logs**: {data['LOGS']}\n**Participated Logs**: {data['PARTICIPATED']}\n**Trainings Hosted**: {data['TRAININGS']}\n**Co-Hosts**: {data['COHOSTS']}\n**Leads**: {data['LEADS']}\n**SGT Trials**: {data['SGT_TRIALS']}\n**Basic Training**: {data['BT_TRIALS']}")
-        embed.set_footer(text = "DO NOT DISCLOSE THIS INFORMATION.\n")
-
-        msg = await interaction.channel.send(embed = embed)
-        await interaction.followup.send('Profile Loaded.', ephemeral=True)
-        await msg.delete(delay = 45)
-
-    @app_commands.command(name = "hc", description = "Check an NCO's profile.")
-    @app_commands.checks.has_any_role(452534405874057217)
-    async def profile_hc(self, interaction: discord.Interaction, user: discord.Member) -> None:
-        try:
-            data = await self.utils.stats_fetch(user.id)
-
-        except self.e.UserNotFound as e:
-            await interaction.response.send_message(content = f"{e.__class__.__name__}: {e}")
-            return 1
-
-        embed = discord.Embed(title = "Officer Stats Viewer", description = f"Last Seen on **{data['LAST_SEEN']}**, **{data['LAST_SEEN_DAYS']}** days ago.\n\nLast Promoted on **{data['PROMO_DATE']}**, **{data['PROMO_DAYS']}** days ago.\n\nLast AAR on **{data['LAST_AAR']}**, **{data['LAST_AAR_DAYS']}** days ago.\n\nCurrent Activity Status: `{data['LOA']}`", timestamp = datetime.now(), color = discord.Colour.yellow())
-        embed.set_author(name = f"{user.display_name}'s Stats Summary", icon_url = "https://i.imgur.com/rgsTDEj.png")
-        embed.add_field(name = "Logging Stats", value = f"**Total Logs**: {data['LOGS']}\n**Participated Logs**: {data['PARTICIPATED']}\n**Trainings Hosted**: {data['TRAININGS']}\n**Tryouts Hosted**: {data['TRYOUTS']}\n**Co-Hosts**: {data['COHOSTS']}\n**Leads**: {data['LEADS']}\n**SGT Trials**: {data['SGT_TRIALS']}\n**Basic Training**: {data['BT_TRIALS']}")
-        embed.set_footer(text = "DO NOT DISCLOSE THIS INFORMATION.\n")
-
-        await interaction.response.send_message(embed = embed, delete_after = 45)
+            await interaction.followup.send(embed=embed)
 
 async def setup(client: commands.Bot) -> None:
     await client.add_cog(Profiles(client))

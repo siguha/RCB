@@ -1,5 +1,7 @@
 import gspread
 
+from .database_manager import DatabaseManager
+
 # Authorizing our client with the service account
 SERVICE_ACCOUNT = gspread.service_account(filename='service_account.json')
 
@@ -17,3 +19,13 @@ LOAS = PUBLIC_SHEET.worksheet('LOA / ROA')
 SQUADS = PUBLIC_SHEET.worksheet('Lore Squads')
 POPULATION = OFFICER_SHEET.worksheet('Population')
 IDS = OFFICER_SHEET.worksheet('IDs')
+
+class GSClient:
+    def __init__(self, db_path='rcb.db'):
+        self.database = DatabaseManager(db_path)
+
+    async def setup(self):
+        await self.database.connect()
+    
+    async def teardown(self):
+        await self.database.close()

@@ -19,13 +19,18 @@ LOAS = PUBLIC_SHEET.worksheet('LOA / ROA')
 SQUADS = PUBLIC_SHEET.worksheet('Lore Squads')
 POPULATION = OFFICER_SHEET.worksheet('Population')
 IDS = OFFICER_SHEET.worksheet('IDs')
+HOME = OFFICER_SHEET.worksheet('Home Page')
 
 class GSClient:
     def __init__(self, db_path='rcb.db'):
-        self.database = DatabaseManager(db_path)
+        self.database = None
+        self.database_path = db_path
 
-    async def setup(self):
-        await self.database.connect()
+    async def async_init(self):
+        self.database = await DatabaseManager.create(self.database_path)
+
+#    async def setup(self):
+#        await self.database.connect()
     
     async def teardown(self):
         await self.database.close()

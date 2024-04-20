@@ -28,9 +28,6 @@ class GSClient:
 
     async def async_init(self):
         self.database = await DatabaseManager.create(self.database_path)
-
-#    async def setup(self):
-#        await self.database.connect()
     
     async def teardown(self):
         await self.database.close()

@@ -1,4 +1,6 @@
 import discord
+import importlib
+import sys
 # import os
 
 from discord.ext import commands
@@ -36,4 +38,42 @@ class AZI(commands.Bot):
         await super().close()
     
 client = AZI()
+@client.command()
+async def sync(ctx):
+    if ctx.author.id == client.owner_id:
+        await client.tree.sync()
+        await ctx.send('[**Admin**] Synced the tree.')
+
+    else:
+        await ctx.message.delete()
+
+@client.command()
+async def reload_cog(ctx, cog: str):
+    if ctx.author.id == client.owner_id:
+        try:
+            await client.reload_extension(cog)
+            await ctx.send(f"[**Admin**] Reloaded cog `{cog}`.")
+
+        except commands.ExtensionError as e:
+            await ctx.send(f'[**{e.__class__.__name__}**]: {e}')
+
+    else:
+        await ctx.message.delete()
+
+@client.command()
+async def reload_extension(ctx, extension: str):
+    if ctx.author.id == client.owner_id:
+        try:
+            importlib.reload(sys.modules[extension])
+            await ctx.send(f"[**Admin**] Reloaded extension `{extension}`.")
+
+        except commands.ExtensionError:
+            await ctx.send(f'[**FailedToLoad**]: failed to load `{extension}`.')
+
+        except KeyError:
+            await ctx.send(f'[**KeyError**]: `{extension}` not found in sys.modules.')
+
+    else:
+        await ctx.message.delete()
+
 client.run()

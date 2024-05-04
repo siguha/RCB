@@ -60,6 +60,12 @@ class DatabaseManager:
                 mem5 INTEGER,
                 persistent TEXT
             );
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS stickies (
+                message_id INTEGER PRIMARY KEY,
+                title TEXT
+            );
             """
         ]
 

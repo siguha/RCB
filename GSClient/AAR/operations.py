@@ -7,7 +7,7 @@ class AAROperations:
         self.db = database_manager
 
     async def save_aar_to_sheet(self, *args, msg_id: int, log_id: int, log: str, logger_id: int, users: list[int] = None):
-        await self.aar_cache(log_id, msg_id)
+        await self.create_aar(log_id, msg_id)
         date = datetime.datetime.now().strftime("%m/%d/%Y %H:%M:%S")
         AARS.insert_row(values = [date, str(log_id), log, str(logger_id)], value_input_option = 'USER_ENTERED', index = 3)   
         
@@ -30,7 +30,7 @@ class AAROperations:
             AARS.append_row(values = [args[0], args[1], args[2]], value_input_option = 'USER_ENTERED', insert_data_option = 'OVERWRITE', table_range = 'X3:Z3')
 
         elif log == 'Tryout':
-            last_row = await self.utils.last_row(TRYOUTS)
+            last_row = await utilities.SheetUtilities.get_last_row(TRYOUTS)
             date = datetime.datetime.now().strftime("%m/%d/%Y")
             AARS.append_row(values = [args[1], args[2], args[3]], value_input_option = 'USER_ENTERED', insert_data_option = 'OVERWRITE', table_range = 'AA3:AC3')
             TRYOUTS.append_row(values = [date, args[0], args[3], args[4], args[1], args[2]], value_input_option = 'USER_ENTERED', insert_data_option = 'OVERWRITE', table_range = f'B{int(last_row)}:G{int(last_row)}')

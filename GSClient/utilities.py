@@ -5,15 +5,13 @@ import datetime
 from . import AARS
 
 class SheetUtilities:
-    @staticmethod
-    async def get_user_id(discord_id: int):
-        db = await aiosqlite.connect('data.db')
+    def __init__(self, database_manager):
+        self.db = database_manager
 
-        async with db.cursor() as cursor:
+    async def get_user_id(self, discord_id: int):
+        async with await self.db.get_cursor() as cursor:
             await cursor.execute('''SELECT steamid FROM ids WHERE did = ?''', (discord_id,))
             user = await cursor.fetchone()
-
-        await db.close()
 
         if user is not None:
             return user[0]

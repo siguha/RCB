@@ -5,28 +5,45 @@ import sys
 
 from discord.ext import commands
 from GSClient import GSClient
+from GSClient.Profiles.operations import ProfileOperations
+from GSClient.AAR.operations import AAROperations
+from GSClient.utilities import SheetUtilities
+
 # from cogs.form
+
+from discord import ui
+from discord.ui import View, Select, Button, UserSelect
 
 class AZI(commands.Bot):
     def __init__(self):
         super().__init__(
-            command_prefix='!',
+            command_prefix='nt!',
             intents=discord.Intents.all(),
             owner_id=484932458538860544
         )
 
         # Intilaizing the GSClient
         self.gs_client = GSClient()
+        
+        # Initializing our database connection to all of our subpackages.
+        self.profile_ops = None
+        self.aar_ops = None
 
-        self.__initial_extensions = []
+        self.__initial_extensions = [
+            'cogs.forms.aar',
+            'cogs.users.profile'
+        ]
 
     async def setup_hook(self):
         # Setting up our database connection
-        await self.gs_client.setup()
+        await self.gs_client.async_init()
+        
+        self.aar_ops = AAROperations(self.gs_client.database)
+        self.profile_ops = ProfileOperations(self.gs_client.database)
 
         # Loading cog extensions
         for extension in self.__initial_extensions:
-            self.load_extension(extension)
+            await self.load_extension(extension)
 
     async def on_ready(self):
         print(f'Logged in as {self.user} ({self.user.id})')
@@ -38,6 +55,7 @@ class AZI(commands.Bot):
         await super().close()
     
 client = AZI()
+
 @client.command()
 async def sync(ctx):
     if ctx.author.id == client.owner_id:
@@ -76,4 +94,8 @@ async def reload_extension(ctx, extension: str):
     else:
         await ctx.message.delete()
 
-client.run()
+@client.command()
+async def profile_test(ctx):
+    await ctx.send(file=discord.File('id_card_output.png'))
+
+client.run(token="MTA3NTE2NzU4NzIyMDA3NDU2Ng.GdMwRz.wj4zg1xAyEKKOLEYwBm2MzEhVDut6AKm4EHBsM")

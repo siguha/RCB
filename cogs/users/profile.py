@@ -63,12 +63,7 @@ class ProfileCommands(commands.GroupCog, name='profile', description='Profile Co
 
         data = await self.profile_ops.profile_fetch(user.id)
 
-        if interaction.channel_id == 1079463193958678648:
-            create_id_card(data)
-
-            await interaction.followup.send(file=discord.File('id_card_output.png'))
-
-        elif interaction.channel_id in nco_channels:
+        if interaction.channel_id in nco_channels:
             embed = discord.Embed(title = "NCO Stats Viewer", description = f"- Last Seen on **{data['LAST_SEEN']}**, **{data['LAST_SEEN_DAYS']}** days ago.\n- Last Promoted on **{data['PROMO_DATE']}**, **{data['PROMO_DAYS']}** days ago.\n- Last AAR on **{data['LAST_AAR']}**, **{data['LAST_AAR_DAYS']}** days ago.\n- Current Activity Status: `{data['LOA']}`\n\u200b", timestamp = datetime.now(), color = discord.Colour.dark_green())
             embed.set_author(name = f"{user.display_name}'s Stats Summary", icon_url = "https://i.imgur.com/rgsTDEj.png")
             embed.add_field(name = "Logging Stats", value = f"- **Total Logs**: {data['LOGS']}\n- **Participated Logs**: {data['PARTICIPATED']}\n- **Leads**: {data['LEADS']}\n\u200b", inline = False)
@@ -94,6 +89,11 @@ class ProfileCommands(commands.GroupCog, name='profile', description='Profile Co
             embed.set_footer(text = "DO NOT DISCLOSE THIS INFORMATION.\n")
 
             await interaction.followup.send(embed=embed)
+        
+        else:
+            create_id_card(data)
+
+            await interaction.followup.send(file=discord.File('id_card_output.png'))
 
 def create_id_card(data):
     template_img = Image.open('template.png')

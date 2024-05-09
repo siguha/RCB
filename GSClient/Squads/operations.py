@@ -9,7 +9,7 @@ class SquadOperations:
     def __init__(self, database_manager):
         self.db = database_manager
 
-    async def squad_rename(self, guild: discord.Guild, squad: str, name: str, color: str = None):
+    async def squad_rename(self, guild: discord.Guild, squad: str, name: str, color: str = None, persistent: str = "no"):
         cursor = self.db.get_cursor()
         await cursor.execute('''SELECT * FROM squads WHERE name = ?''', (squad.capitalize(),))
         data = await cursor.fetchone()
@@ -18,7 +18,7 @@ class SquadOperations:
             raise ValueError(f"Squad {squad} not found.")
         
         else:
-            await cursor.execute('''UPDATE squads SET name = ? WHERE name = ?''', (name.capitalize(), squad.capitalize()))
+            await cursor.execute('''UPDATE squads SET name = ?, persistent = ? WHERE name = ?''', (name.capitalize(), squad.capitalize(), "yes"))
 
         await self.db.connection.commit()
 
@@ -37,6 +37,9 @@ class SquadOperations:
         officer_role = guild.get_role(333432981605580800)
 
         for squad in squad_list:
+            if squad == "Command":
+                continue
+
             placeholder = []
 
             for user in user_list:
@@ -85,10 +88,10 @@ class SquadOperations:
                                         print(f"ID NOT FOUND: {id} - {guild.get_member(int(id)).display_name}\n")
                                         member = guild.get_member(id)
 
-                                        rank = "SRE" if enlisted_role in member.roles else "SRN" if nco_role in member.roles else "SRO" if officer_role in member.roles else None
+                                        title = "SRE" if enlisted_role in member.roles else "SRN" if nco_role in member.roles else "SRO" if officer_role in member.roles else None
                                         member_name = member.display_name.split(" | ")[0]
                                         member_designation = member.display_name.split(" | ")[1].split(" ")[1]
-                                        new_name = f"{member_name} | {rank} {member_designation}"
+                                        new_name = f"{member_name} | {title} {member_designation}"
 
                                         await member.edit(nick=new_name)
                                         await guild.get_member(int(id)).remove_roles(squad_role)
@@ -138,61 +141,55 @@ class SquadOperations:
         await self.db.connection.commit()
         await self.squad_checker(guild)
 
-        async def squad_checker(self, guild: discord.Guild) -> None:
-            db = await aiosqlite.connect('rcb.db')
-            _active_squad_list = list(set([item for sublist in DATABASE.get("E4:E") for item in sublist if item]))
-            _deleted = []
+    async def squad_checker(self, guild: discord.Guild) -> None:
+        _active_squad_list = list(set([item for sublist in DATABASE.get("F4:F") for item in sublist if item]))
+        _deleted = []
 
-            async with db.cursor() as cursor:
-                await cursor.execute('''SELECT * FROM squads''')
-                _old_squad_list = await cursor.fetchall()
+        cursor = await self.db.get_cursor()
+        await cursor.execute('''SELECT * FROM squads''')
+        _old_squad_list = await cursor.fetchall()
 
-                await cursor.close()
+        for squad in _old_squad_list:
+            role = guild.get_role(int(squad[1]))
+            channel = guild.get_channel(int(squad[2]))
 
-            for squad in _old_squad_list:
-                role = guild.get_role(int(squad[1]))
-                channel = guild.get_channel(int(squad[2]))
-
-                if squad[8] == "yes":
-                    pass
-
-                else:
-                    if squad[0] not in _active_squad_list:
-                        try:
-                            await role.delete(reason="Squad is empty.")
-                        
-                        except: pass
-                        try:
-                            await channel.delete(reason="Squad is empty.")
-                            _deleted.append(f"{squad[0]} - Squad is Empty.\n")
-                        
-                        except: pass
-
-                        async with db.cursor() as cursor:
-                                await cursor.execute('''DELETE FROM squads WHERE name = ?''', (squad[0],))
-                                await db.commit()             
-                    
-                    else:
-                        async for message in channel.history(limit=1):
-                            date = message.created_at
-                            today = datetime.datetime.now(datetime.timezone.utc)
-                            delta = today - date
-
-                        if int(delta.days) >= 14:
-                            member_count = squad.count(None)
-
-                            if member_count <= 2:
-                                await channel.delete(reason="2 Week+ Inactivity -2 Members.")
-                                await role.delete(reason="2 Week+ Inactivity -2 Members.")
-                                _deleted.append(f"{squad[0]} - 2 Week+ Inactivity -2 Members.\n")
-
-                                async with db.cursor() as cursor:
-                                        await cursor.execute('''DELETE FROM squads WHERE name = ?''', (squad[0],))
-                                        await db.commit()
-                
-            sgm_channel = guild.get_channel(946095177695653988)
-            if len(_deleted) == 0:
+            if squad[8] == "yes":
                 pass
+
             else:
-                await sgm_channel.send(content=f"# Channel Purge\n\nThe following channels were purged either for inactivity or zero memebers:\n\n {', '.join(_deleted)}\n\n**If this was a mistake, please ping Officer+.**")
-            await db.close()
+                if squad[0] not in _active_squad_list:
+                    try:
+                        await role.delete(reason="Squad is empty.")
+                    
+                    except: pass
+                    try:
+                        await channel.delete(reason="Squad is empty.")
+                        _deleted.append(f"{squad[0]} - Squad is Empty.\n")
+                    
+                    except: pass
+
+                    await cursor.execute('''DELETE FROM squads WHERE name = ?''', (squad[0],))
+                    await self.db.connection.commit()         
+                
+                else:
+                    async for message in channel.history(limit=1):
+                        date = message.created_at
+                        today = datetime.datetime.now(datetime.timezone.utc)
+                        delta = today - date
+
+                    if int(delta.days) >= 14:
+                        member_count = squad.count(None)
+
+                        if member_count <= 2:
+                            await channel.delete(reason="2 Week+ Inactivity -2 Members.")
+                            await role.delete(reason="2 Week+ Inactivity -2 Members.")
+                            _deleted.append(f"{squad[0]} - 2 Week+ Inactivity -2 Members.\n")
+
+                            await cursor.execute('''DELETE FROM squads WHERE name = ?''', (squad[0],))
+                            await self.db.connection.commit()  
+            
+        sgm_channel = guild.get_channel(946095177695653988)
+        if len(_deleted) == 0:
+            pass
+        else:
+            await sgm_channel.send(content=f"# Channel Purge\n\nThe following channels were purged either for inactivity or zero memebers:\n\n {', '.join(_deleted)}\n\n**If this was a mistake, please ping Officer+.**")

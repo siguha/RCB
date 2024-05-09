@@ -1,9 +1,40 @@
 import discord
+import math
 import re
+import datetime
 
 from discord import ui, app_commands
 from discord.ext import commands
 from PIL import Image, ImageDraw, ImageFont
+
+restricted_numbers = [
+    40,
+    90,
+    91,
+    2,
+    22,
+    42,
+    62,
+    82,
+    92,
+    13,
+    23,
+    33,
+    93,
+    15,
+    16,
+    36,
+    46,
+    86,
+    7,
+    37,
+    38,
+    68,
+    9,
+    29,
+    39,
+    69,
+]
 
 class ProfileCommands(commands.GroupCog, name='profile', description='Profile Commandset.'):
     def __init__(self, client: commands.Bot):
@@ -28,9 +59,14 @@ class ProfileCommands(commands.GroupCog, name='profile', description='Profile Co
         ROLES = [NCO_ROLE, O_ROLE, HC_ROLE]
 
     @app_commands.command(name='register', description='Register a commando profile.')
-    async def profile_register(self, interaction: discord.Interaction, name: str, steamid: str, designation: str, user: discord.Member = None):
+    async def profile_register(self, interaction: discord.Interaction, name: str, steamid: str, designation: int, user: discord.Member = None):
         if re.match(r"^STEAM_0:(?:0|1):[0-9]+[^A-Z]$", steamid) is None:
             await interaction.response.send_message(content = f"Invalid SteamID. Ensure your SteamID looks simiarly to **STEAM:0:X:XXXXXXX....** and try again...", ephemeral = True, delete_after = 5)
+
+        if designation in restricted_numbers:
+            restricted_numbers_text = generate_embed(restricted_numbers)
+
+            await interaction.response.send_message(content = f"Invalid Designation. Ensure your Designation is not a restricted number and try again...\n\n{restricted_numbers_text}", ephemeral = True)
 
         else:
             member = interaction.user if user is None else user
@@ -95,6 +131,20 @@ class ProfileCommands(commands.GroupCog, name='profile', description='Profile Co
 
             await interaction.followup.send(file=discord.File('id_card_output.png'))
 
+def generate_embed(numbers):
+    num_columns = int(math.sqrt(len(restricted_numbers)))
+    num_rows = math.ceil(len(restricted_numbers) / num_columns)
+
+    embed_text = "Restricted Numbers:\n"
+
+    for i, number in enumerate(numbers):
+        embed_text += str(number).ljust(5)
+
+        if (i + 1) % num_columns == 0:
+            embed_text += '\n'
+        
+    return embed_text
+
 def create_id_card(data):
     template_img = Image.open('template.png')
     draw = ImageDraw.Draw(template_img)
@@ -121,7 +171,7 @@ def create_id_card(data):
 
     draw.text(name_pos, f"\"{data['NAME']}\", {data['DESIGNATION']}", font=font, fill='#979798')
     draw.text(rank_pos, data['RANK'], font=font, fill='#979798')
-    draw.text(callsign_pos, data['CLASS'], font=font, fill='#979798')
+    draw.text(callsign_pos, data['ATTACHMENT'] if data['ATTACHMENT'] != "" else data['CLASS'], font=font, fill='#979798')
     draw.text(join_pos, data['JOINED'], font=font, fill='#979798')
     draw.text(promotion_pos, data['PROMO_DATE'], font=font, fill='#979798')
     draw.text(last_seen_pos, data['LAST_SEEN'], font=font, fill='#979798')

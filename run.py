@@ -117,4 +117,4 @@ async def reload_extension(ctx, extension: str):
     else:
         await ctx.message.delete()
 
-client.run(token="MTA3NTE2NzU4NzIyMDA3NDU2Ng.GdMwRz.wj4zg1xAyEKKOLEYwBm2MzEhVDut6AKm4EHBsM")
+client.run(token="")

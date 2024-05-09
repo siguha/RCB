@@ -1,20 +1,19 @@
 import discord
 import importlib
 import sys
-# import os
+import os
 
+from dotenv import load_dotenv
 from discord.ext import commands
 from GSClient import GSClient
 from GSClient.Profiles.operations import ProfileOperations
 from GSClient.AAR.operations import AAROperations
-from GSClient.utilities import SheetUtilities
 from GSClient.Squads.operations import SquadOperations
 from GSClient.LOAs.operations import LOAOperations
 
-# from cogs.form
+load_dotenv()
 
-from discord import ui
-from discord.ui import View, Select, Button, UserSelect
+discord_token = os.getenv('TOKEN')
 
 class AZI(commands.Bot):
     def __init__(self):
@@ -117,4 +116,4 @@ async def reload_extension(ctx, extension: str):
     else:
         await ctx.message.delete()
 
-client.run(token="")
+client.run(token=discord_token)

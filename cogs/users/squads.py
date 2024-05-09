@@ -13,7 +13,7 @@ class SquadCommands(commands.GroupCog, name='squad', description='Squdas Command
 
     async def background(self, client: commands.Bot):
         await client.wait_until_ready()
-        # self.squads_check.start()
+        self.squads_check.start()
 
     @app_commands.command(name='rename', description='Forcefully rename a squad.')
     @app_commands.checks.has_any_role(842312625735860255, 333432981605580800, 452534405874057217)
@@ -35,10 +35,10 @@ class SquadCommands(commands.GroupCog, name='squad', description='Squdas Command
         except Exception as e: 
             await interaction.response.send_message(content=f'{e.__class__.__name__}: {e}', delete_after=10, ephemeral=True)
 
-    # @tasks.loop(minutes=10)
-    # async def squads_check(self) -> None:
-    #     guild = self.client.get_guild(333429464752979978)
-    #     await self.squad_ops.squad_builder(guild)
+    @tasks.loop(minutes=10)
+    async def squads_check(self) -> None:
+        guild = self.client.get_guild(333429464752979978)
+        await self.squad_ops.squad_builder(guild)
 
 async def setup(client: commands.Bot) -> None:
     await client.add_cog(SquadCommands(client))

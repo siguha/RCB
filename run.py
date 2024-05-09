@@ -8,6 +8,8 @@ from GSClient import GSClient
 from GSClient.Profiles.operations import ProfileOperations
 from GSClient.AAR.operations import AAROperations
 from GSClient.utilities import SheetUtilities
+from GSClient.Squads.operations import SquadOperations
+from GSClient.LOAs.operations import LOAOperations
 
 # from cogs.form
 
@@ -28,10 +30,16 @@ class AZI(commands.Bot):
         # Initializing our database connection to all of our subpackages.
         self.profile_ops = None
         self.aar_ops = None
+        self.squad_ops = None
+        self.loa_ops = None
 
         self.__initial_extensions = [
             'cogs.forms.aar',
-            'cogs.users.profile'
+            'cogs.forms.tickets',
+            'cogs.forms.loa',
+            'cogs.users.squads',
+            'cogs.users.profile',
+            'cogs.users.officers'
         ]
 
     async def setup_hook(self):
@@ -40,6 +48,8 @@ class AZI(commands.Bot):
         
         self.aar_ops = AAROperations(self.gs_client.database)
         self.profile_ops = ProfileOperations(self.gs_client.database)
+        self.squad_ops = SquadOperations(self.gs_client.database)
+        self.loa_ops = LOAOperations(self.gs_client.database)
 
         # Loading cog extensions
         for extension in self.__initial_extensions:
@@ -61,6 +71,19 @@ async def sync(ctx):
     if ctx.author.id == client.owner_id:
         await client.tree.sync()
         await ctx.send('[**Admin**] Synced the tree.')
+
+    else:
+        await ctx.message.delete()
+
+@client.command()
+async def load_cog(ctx, cog: str):
+    if ctx.author.id == client.owner_id:
+        try:
+            await client.load_extension(cog)
+            await ctx.send(f"[**Admin**] Loaded cog `{cog}`.")
+
+        except commands.ExtensionError as e:
+            await ctx.send(f'[**{e.__class__.__name__}**]: {e}')
 
     else:
         await ctx.message.delete()
@@ -93,9 +116,5 @@ async def reload_extension(ctx, extension: str):
 
     else:
         await ctx.message.delete()
-
-@client.command()
-async def profile_test(ctx):
-    await ctx.send(file=discord.File('id_card_output.png'))
 
 client.run(token="MTA3NTE2NzU4NzIyMDA3NDU2Ng.GdMwRz.wj4zg1xAyEKKOLEYwBm2MzEhVDut6AKm4EHBsM")

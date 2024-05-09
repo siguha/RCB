@@ -1,4 +1,5 @@
 import gspread
+import datetime
 
 from GSClient import HOME, IDS, ROSTER, DATABASE, utilities
 
@@ -46,7 +47,7 @@ class ProfileOperations:
 
             existing = IDS.find(steam_id)
 
-            full_designation = f'{batch}{designation}'
+            full_designation = f'{batch}{"{:02d}".format(designation)}'
 
             if existing is None:
                 IDS.batch_update([{
@@ -60,7 +61,7 @@ class ProfileOperations:
                     'values' : [[name, steam_id, str(discord_id), full_designation]],
                 }], value_input_option = 'RAW')
     
-            return f'{batch}{designation}'
+            return full_designation
 
         else:
             raise ValueError("Batch and designation combination already exists.")
@@ -143,3 +144,64 @@ class ProfileOperations:
             }
 
             return data
+        
+    async def vote_user(self, did: int):
+        loc = DATABASE.find(str(did))
+
+        if loc is None:
+            raise ValueError(f'DiscordID {did} not found in Officer Database.')
+
+        else:
+            user_row = loc.row
+            vote_col = 31
+            DATABASE.update_cell(user_row, vote_col, datetime.datetime.now().strftime('%m/%d/%Y'))
+
+    async def warn_user(self, did: int):
+        loc = DATABASE.find(str(did))
+
+        if loc is None:
+            raise ValueError(f'DiscordID {did} not found in Officer Database.')
+
+        else:
+            row = loc.row
+            col = 17
+            DATABASE.update_cell(row, col, 'TRUE')
+
+    async def enlisted_promos(self) -> list[str]:
+        vote_strings = []
+        ready_vote_cells = DATABASE.findall("Yes", in_column=33)
+
+        if ready_vote_cells:
+            ready_vote_rows = [DATABASE.row_values(cell.row) for cell in ready_vote_cells]
+
+            for row in ready_vote_rows:
+                if row[1] == "PVT":
+                    vote_strings.append(f"**{row[2]}** for **PFC**.")
+
+                else:
+                    continue
+
+        return vote_strings
+
+    async def cert_user(self, did: int, cert: str):
+        column_locations = {
+            "BT": 20,
+            "SLT": 'U',
+            "RDT": 'V',
+        }
+
+        date_of_completion = datetime.datetime.now().strftime('%m/%d/%Y')
+
+        user_location = DATABASE.find(str(did), in_column=7)
+        if user_location:
+            if cert == "BT":
+                DATABASE.batch_update([{
+                    'range': f'S{user_location.row}:T{user_location.row}',
+                    'values': [['TRUE', date_of_completion]],
+                }], value_input_option = 'USER_ENTERED')
+            
+            else:
+                DATABASE.update(f'{column_locations[cert]}{user_location.row}', 'TRUE', value_input_option = 'USER_ENTERED')
+
+        else:
+            raise ValueError("User ID not found in database.")

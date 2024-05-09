@@ -1,44 +1,52 @@
 import discord
-from discord import app_commands
-from discord.ext import commands
-from datetime import datetime
 import datetime
 
-from utilities.sheetutils import SheetUtilities
-from utilities.exceptions import Exceptions
+from discord.ext import commands
+from discord import app_commands
+from datetime import datetime, timedelta
 
-P_UTILS = SheetUtilities.ProfileUtils()
-O_UTILS = SheetUtilities.OfficerUtils()
-e = Exceptions()
-
-class Officers(commands.GroupCog, name='officer', description='Officer comamndset.'):
+class OfficerCommands(commands.GroupCog, name='officer', description='Officer comamndset.'):
     def __init__(self, client: commands.Bot):
         super().__init__()
         self.client = client
+        self.profile_ops = self.client.profile_ops
+
         self.vote_reactions = [
             "<:Agree:997952326260244540>", 
             "<:Disagree:997952324418945274>"
         ]
+
+        self.certifications = [
+            'BT',
+            'SLT',
+            'RDT',
+        ]
+
         self.client.loop.create_task(self.background(self.client))
 
     async def background(self, client: commands.Bot):
         await client.wait_until_ready()
+
+        global GUILD
         global O_ROLE
         global HC_ROLE 
-        guild = client.get_guild(333429464752979978)
-        O_ROLE = guild.get_role(333432981605580800)
-        HC_ROLE = guild.get_role(452534405874057217)
+
+        GUILD = client.get_guild(333429464752979978)
+        O_ROLE = GUILD.get_role(333432981605580800)
+        HC_ROLE = GUILD.get_role(452534405874057217)
 
     @app_commands.command(name='vote', description='Initiate an Officer+ Vote.')
     async def officer_vote(self, interaction: discord.Interaction, user: discord.Member, rank: str):
         await interaction.response.defer(ephemeral=True)
         
         try:
-            data = await P_UTILS.stats_fetch(user.id)
-            await O_UTILS.officer_vote(user.id)
-        except e.UserNotFound as error:
+            data = await self.profile_ops.stats_fetch(user.id)
+            await self.profile_ops.vote_user(user.id)
+
+        except Exception as error:
             await interaction.followup.send(content = f"{error.__class__.__name__}: {error}")
             return 1
+        
         else:
             if interaction.channel_id == 692638901889663016:
                 embed = discord.Embed(title=f"{user.display_name} for {rank}", description=f"Please use the thread below to vote.", colour=discord.Colour.red(), timestamp=datetime.datetime.now())
@@ -55,34 +63,59 @@ class Officers(commands.GroupCog, name='officer', description='Officer comamndse
                 await msg.add_reaction(reaction)
 
             await interaction.followup.send('Vote Initiated.', ephemeral=True)
-    
+
     @app_commands.command(name='warn', description='Warn a user for inactivity.')
     @app_commands.checks.has_any_role(333432642878046209, 333432981605580800, 452534405874057217)
     async def officer_warn(self, interaction: discord.Interaction, user: discord.Member):
         try:
-            await O_UTILS.officer_warn(user.id)
+            await self.profile_ops.warn_user(user.id)
         
-        except e.UserNotFound as error:
+        except Exception as error:
             await interaction.response.send_message(content = f"{error.__class__.__name__}: {error}")
             return 1
 
         else:
-            embed = discord.Embed(title='Record of Warn', description=f'{user.mention} has been warned for inactivity to be checked again in 24 hours.', colour=discord.Colour.red())
+            present_time = datetime.now()
+            check_time = present_time + timedelta(days=1)
+            check_time_epoch = int(check_time.timestamp())
+
+            embed = discord.Embed(title='Record of Warn', description=f'{user.mention} has been warned for inactivity to be checked again on <t:{check_time_epoch}>', colour=discord.Colour.red())
             embed.set_author(name='Inactivity Warning', icon_url="https://i.imgur.com/rgsTDEj.png")
             embed.set_footer(text=f'Administered by {interaction.user.display_name}', icon_url=interaction.user.display_avatar)
             await interaction.response.send_message(embed = embed)
 
-    @app_commands.command(name = "promos", description = "Check #nco-votes & #officer-votes for a list of passed votes.")
+    @app_commands.command(name="cert", description="Certify a player in a qualification.")
+    async def officer_cert(self, interaction: discord.Interaction, user: discord.Member, certification: str):
+        await interaction.response.defer(ephemeral=True)
+        
+        if certification not in self.certifications:
+            await interaction.followup.send(f'Certification "{certification}" not found in cert list.', ephemeral=True)
+
+        else:
+            cert_roles = {
+                'BT' : 1206327479308914741,
+                'SLT' : 1206327440981364767,
+                'RDT' : 1206327461709615204
+            }
+
+            try:
+                await self.profile_ops.cert_user(user.id, certification)
+                await user.add_roles(interaction.guild.get_role(cert_roles[certification]))
+                await interaction.followup.send(f'{user.mention} has been certified in **{certification}**.', ephemeral=True)
+
+            except Exception as error:
+                await interaction.followup.send(f'{error.__class__.__name__}: {error}', ephemeral=True)
+
     @app_commands.checks.has_any_role(333432981605580800, 452534405874057217)
-    async def vote_checks(self, interaction: discord.Interaction) -> None:
-        date = datetime.datetime.today() - datetime.timedelta(days = 1)
+    async def officer_votes(self, interaction: discord.Interaction) -> None:
+        date = datetime.today() - timedelta(days = 1)
         passed = []
 
         if interaction.channel_id == 409270453836840960:
             channel = interaction.guild.fetch_channel(409270453836840960)
 
         else:
-            channels = [409270453836840960, 692638901889663016]
+            channels = [409270453836840960, 692638901889663016, 510612993252392960]
         
             for id in channels:
                 channel = await interaction.guild.fetch_channel(id)
@@ -107,8 +140,11 @@ class Officers(commands.GroupCog, name='officer', description='Officer comamndse
                             pass
 
         embed = discord.Embed(title = "Pending Votes", color = discord.Colour.red(), timestamp = datetime.datetime.now())
+        private_promo_list = await self.profile_ops.enlisted_promos()
+        pass_strings_joined = private_promo_list + passed
+        
         n = 1
-        for vote in passed:
+        for vote in pass_strings_joined:
             embed.add_field(name = f"Vote {n}", value = vote, inline = False)
             n += 1
 
@@ -129,4 +165,4 @@ class Officers(commands.GroupCog, name='officer', description='Officer comamndse
                 await message.create_thread(name = "Vote Discussion")
 
 async def setup(client: commands.Bot) -> None:
-    await client.add_cog(Officers(client))
+    await client.add_cog(OfficerCommands(client))

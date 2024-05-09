@@ -51,7 +51,7 @@ class support_modal(ui.Modal, title = "RC Support System"):
             await interaction.followup.send("Your report/complaint has been submitted to the High Command+. If you've included your name, please expect a follow up message shortly.")
 
         else:
-            don_dm = await interaction.guild.get_member(309401646461353984).create_dm()
+            don_dm = await interaction.guild.get_member(484932458538860544).create_dm()
             await don_dm.send(embed = embed)
             await interaction.followup.send("Your report/complaint has been submitted to the Commander. If you've included your name, please expect a follow up message shortly.")
 
@@ -86,7 +86,7 @@ class support_button(ui.View):
     def __init__(self):
         super().__init__(timeout = None)
 
-    @discord.ui.button(label = "Anonymous Feedback/Complaint Report", style = discord.ButtonStyle.gray, custom_id = 'persistent_view:support', disabled = False, emoji = "📩")
+    @discord.ui.button(label = "RC Ticket System", style = discord.ButtonStyle.gray, custom_id = 'persistent_view:support', disabled = False, emoji = "📩")
     async def support_button(self, interaction: discord.Interaction, button: ui.Button): 
         enlisted = discord.utils.find(lambda r: r.name == 'Enlisted', interaction.message.guild.roles)
         nco = discord.utils.find(lambda r: r.name == 'NCO', interaction.message.guild.roles)
@@ -95,47 +95,18 @@ class support_button(ui.View):
         if enlisted in interaction.user.roles or nco in interaction.user.roles or officer in interaction.user.roles:
             await interaction.response.send_message(view = group_select(), ephemeral = True) 
         
-    @discord.ui.button(label = "Games Role", style = discord.ButtonStyle.red, custom_id = 'persistent_view:games', disabled = False, emoji = '🎮')
-    async def games_button(self, interaction: discord.Interaction, button: ui.Button):
-        games = discord.utils.find(lambda r: r.name == 'Games', interaction.message.guild.roles)
-
-        if games in interaction.user.roles:
-            await interaction.user.remove_roles(games)
-            await interaction.response.send_message(content = "> Your 'Games' Role has been removed!", ephemeral = True)
-
-        else:
-            await interaction.user.add_roles(games)
-            await interaction.response.send_message(content = "> Your 'Games' Role has been added!", ephemeral = True)
-
 class tickets(commands.Cog):
     def __init__(self, client: commands.Bot) -> None:
         self.client = client
 
-    @commands.hybrid_command(name="ticket_reload", with_app_command=False)
-    async def ticket_reload(self, interaction: discord.Interaction):
-        options = [
-            discord.SelectOption(label = "Officer+", description = "Send an anonymous or signed message to Officer+."),
-            discord.SelectOption(label = "High Command+", description = "Send an anonymous or signed message to High Command+."),
-        ]
-
-        channel = interaction.guild.get_channel(443963448695586837)
-        msg = await channel.fetch_message(1079248513025720451)
-        embed_one = msg.embeds[0]
-
-        embed_two = discord.Embed(title = f"Confidential Support System", description = f"If you're wanting to voice concerns or make a report within the battalion, please consider using our *completely anonymous*, __**Confidential Support**__ system. If you wish to include your name, please feel free to do so- you won't be ostracized for anything you say.\n\n**If you're making a serious complaint about a player and don't incldue either evidence or your name**, please know that it's hard for Officer+ to ensure the validity of your claims. Keep this in mind when making a report.\n‎", color = discord.Colour.red())
-        embed_two.add_field(name = '"What do I submit here?"', value = "You can use this form for a number of things. An example of this might be **Voicing concerns regarding the battalion, or it's member(s).** Whatever you decide to use it for, know that it'll remain fully confidential, and if you chose to be anonymous, know that in no way will we be able to identify the reporter.")
-        embed_two.set_author(name = "05 Commando Battalion High Command", icon_url = "https://i.imgur.com/rgsTDEj.png")
-        embed_two.set_footer(text = "Last Updated")
-
-        await msg.edit(embeds = [embed_one, embed_two], view = support_button())
-
     @commands.hybrid_command(name="intro", with_app_command=False)
     async def intro(self, interaction: discord.Interaction):
-        embed = discord.Embed(title = f"Welcome to the Republic Commandos", description = f"Please follow the format:\n> `Name:`\n> `Rank/Needed Tag:`\n\nIf you're a member of the battalion, use `/profile sync [STEAMID]` to grant yourself access to our Bot functions, like LOAs.\n‎", timestamp = datetime.now(), color = discord.Colour.red())
+        embed = discord.Embed(title = f"Welcome to the Republic Commandos", description = f"If you're a member of the battalion, use `/profile sync [STEAMID]` to grant yourself access to our Bot functions, like LOAs.\n‎", timestamp = datetime.now(), color = discord.Colour.red())
         embed.set_author(name = "05 Commando Battalion High Command", icon_url = "https://i.imgur.com/rgsTDEj.png")
-        embed.add_field(name = "Discord Policies", value = """> **1**: Follow formats and rules pinned within channels, and keep topics relevant to them.\n> **2:** Your Discord username must reflect your in-game name, for example: "**Don | Delta 38 Boss**".\n> **3:** Both battalion members and guests must adhere to Discord policy and Officer discretion.\n> **4:** Use common sense.\n‎""", inline = False)        
-        embed.add_field(name = "Confidential Support System", value = "If you need to contact <@&333432642878046209>+ __confidentially__ for any matter, whether it be __peer-to-peer relations__, __qualms with the battalion__, or *any other* reason, click the button below. You can either remain named, or be entirely anonymous.\n\n**If you're making a serious complaint about a player and don't include either evidence or your name**, please know that it's hard for Officer+ to ensure the validity of your claims. Keep this in mind when making a report.\n‎", inline = False)
-        embed.add_field(name = "Permanent Invite Link", value = "https://discord.gg/tEJNbZk", inline = False)
+        embed.add_field(name = "Discord Policies", value = """> **1**: Follow formats and rules pinned within channels, and keep topics relevant to them.\n> **2:** Your Discord username must reflect your in-game name, for example: "**Don | Delta 38 Boss**" (*We ask that our guest's mirror this convention for our convenience as well.*).\n> **3:** Both battalion members and guests must adhere to Discord policy and Officer discretion.\n> **4:** We ask that you please don't spam any of our chats.\n> **5:** Use common sense.\n‎""", inline = False)        
+        embed.add_field(name="Discord Guests", value="If you're joining the Discord in hopes of Guest access, please contact an <@&333432981605580800>+. Your request may or may not be denied and is dependant on Officer discretion but will most likely get accepted if you're:\n- **An external High Command member.**\n- **A friend of/with the battalion.**\n- **A trusted Gamemaster.**\n\nIf you're given access, we ask that you adhere to our Discord policies and guidelines. We will occasionally purge Discord Access to clean our member list- if you fall victim to a purge but believe you still deserve access, please DM another Officer+.\n‎", inline=False)
+        embed.add_field(name = "RC Support System", value = "The RC Support system is designed to be a multi-purpose ticket system, contacting specific rank groups for any matter. If you have questions, need AARs logged, or more, you can use this for that purpose.\n\nIf you need to contact <@&333432642878046209>+ __confidentially__ for any matter, whether it be __peer-to-peer relations__, __qualms with the battalion__, or *any other* reason, click the button below. You can either remain named, or be entirely anonymous.\n\n**If you're making a serious complaint about a player and don't include either evidence or your name**, please know that it's hard for Officer+ to ensure the validity of your claims. Keep this in mind when making a report.\n‎", inline = False)
+        embed.add_field(name = "Permanent Invite Link", value = "https://discord.gg/suprc", inline = False)
         embed.set_footer(text = "Last Updated")
         await interaction.channel.send(embed = embed, view = support_button())
 

@@ -1,23 +1,17 @@
 import discord
 import asyncio
+
 from datetime import datetime
 from discord.ext import commands, tasks
 from discord import app_commands, ui
-from utilities.exceptions import Exceptions
-from utilities.sheetutils import SheetUtilities
 
-# Still need to set up time-based tasks to check for expiring LOAs.
-
-e = Exceptions()
-UTILS = SheetUtilities.LOAUtils()
-
-class LOAs(commands.GroupCog, name = "loa", description = "LOA commandset."):
+class LOACommands(commands.GroupCog, name = "loa", description = "LOA commandset."):
     def __init__(self, client: commands.Bot) -> None:
         super().__init__()
         self.client = client
         self.client.loop.create_task(self.background(self.client))
-        self.utils = SheetUtilities.ProfileUtils()
-        self.e = Exceptions()
+        self.loa_ops = self.client.loa_ops
+
         self.types = [
             'LOA',
             'ROA'
@@ -30,14 +24,17 @@ class LOAs(commands.GroupCog, name = "loa", description = "LOA commandset."):
 
     async def background(self, client: commands.Bot):
         await client.wait_until_ready()
+
         global LOA_CH 
         global GUILD
+
         GUILD = client.get_guild(333429464752979978)
         LOA_CH = GUILD.get_channel(338196204234211339)
+        
         self.loa_checkins.start()
 
     @app_commands.command(name = "request", description = "Request an absence.")
-    async def loa_request(self, interaction: discord.Interaction, type: str, user: discord.Member = None) -> None:
+    async def loa_request(self, interaction: discord.Interaction, type: str, user: discord.Member = None):
         if type not in self.types: 
             await interaction.response.send_message(f"Invalid absence type- use the autocomplete options.", ephemeral = True, delete_after = 15)
         
@@ -68,10 +65,10 @@ class LOAs(commands.GroupCog, name = "loa", description = "LOA commandset."):
             user = interaction.user
 
         try:
-            await UTILS.loa_end(user=user.id)
+            await self.client.loa_ops.loa_end(user=user.id)
         
-        except (e.UserNotFound, e.LOAExisting, e.LOANotFound) as error:
-            await interaction.response.send_message(f"{error.__class__.__name__}: {error}", ephemeral=True, delete_after=15)
+        except Exception as e:
+            await interaction.response.send_message(f"{e.__class__.__name__}: {e}", ephemeral=True, delete_after=15)
             return 1
 
         else:
@@ -86,9 +83,9 @@ class LOAs(commands.GroupCog, name = "loa", description = "LOA commandset."):
             user = interaction.user
         
         try:
-            old = await UTILS.loa_fetch(user=user.id)
+            old = await self.client.loa_ops.loa_fetch(user=user.id)
 
-        except (e.UserNotFound, e.LOANotFound) as error:
+        except Exception as error:
             await interaction.response.send_message(f"{error.__class__.__name__}: {error}", ephemeral=True, delete_after=15)
             return 1
 
@@ -99,15 +96,19 @@ class LOAs(commands.GroupCog, name = "loa", description = "LOA commandset."):
             embed.add_field(name = "Requested By", value = user.display_name, inline = False)
             embed.add_field(name = "Requester ID", value = str(user.id), inline = False)
             embed.add_field(name = "Edit Type", value = field, inline = False)
+
             if field == 'Start':
                 embed.add_field(name = "Old Start Date", value = old['start'], inline = True)
                 embed.add_field(name = "New Start Date", value = edit, inline = True)
+
             elif field == 'End':
                 embed.add_field(name = "Old End Date", value = old['end'], inline = True)
                 embed.add_field(name = "New End Date", value = edit, inline = True)
+
             elif field == 'Type':
                 embed.add_field(name = "Old Type", value = old['type'], inline = True)
-                embed.add_field(name = "New Type", value = edit, inline = True)        
+                embed.add_field(name = "New Type", value = edit, inline = True)      
+                  
             await LOA_CH.send(embed = embed, view = Views.RequestButtons())
             await interaction.response.send_message(content="Absence update request submitted.", ephemeral=True, delete_after=15)
 
@@ -128,7 +129,7 @@ class LOAs(commands.GroupCog, name = "loa", description = "LOA commandset."):
     @tasks.loop(hours = 12)
     async def loa_checkins(self) -> None:
         """Handles automatic checkins."""
-        expirations = await UTILS.loa_checkin()
+        expirations = await self.client.loa_ops.loa_checkin()
 
         for loa in expirations:
             embed = discord.Embed(title='Absence Check-in', description=f'Your **{loa[3]}** ends in **{loa[2]} Days**, on **{loa[1]}**.\n\nWill you be returning, or do you require an extension?', colour=discord.Colour.red())
@@ -184,11 +185,11 @@ class Views:
             
             if embed.title == "Request for Absence":
                 try:
-                    await UTILS.loa_add(name=fields[0].value, user_id=fields[1].value, start_date=fields[2].value, end_date=fields[3].value, type=fields[4].value, reason=fields[5].value)
+                    await self.client.loa_ops.loa_add(name=fields[0].value, user_id=fields[1].value, start_date=fields[2].value, end_date=fields[3].value, type=fields[4].value, reason=fields[5].value)
 
-                except e.UserNotFound as error:
+                except Exception as e:
                     await interaction.message.delete(delay = 15)
-                    await interaction.followup.send(content = f"{error.__class__.__name__}: {error} - Deleting AAR request in 15 seconds.", ephemeral = True)
+                    await interaction.followup.send(content = f"{e.__class__.__name__}: {e} - Deleting AAR request in 15 seconds.", ephemeral = True)
                     return 1
                 
                 else:
@@ -198,11 +199,11 @@ class Views:
 
             else:
                 try:
-                    await UTILS.loa_edit(user=fields[1].value, field='End', edit=fields[2].value)
+                    await self.client.loa_ops.loa_edit(user=fields[1].value, field='End', edit=fields[2].value)
                 
-                except e.LOANotFound as error:
+                except Exception as e:
                     await interaction.message.delete(delay = 15)
-                    await interaction.followup.send(content = f"{error.__class__.__name__}: {error} - Deleting AAR request in 15 seconds.", ephemeral = True)
+                    await interaction.followup.send(content = f"{e.__class__.__name__}: {e} - Deleting AAR request in 15 seconds.", ephemeral = True)
                     return 1
                 
                 else:
@@ -260,4 +261,4 @@ class Views:
                 await interaction.response.send_message("This is not your checkin.", ephemeral=True, delete_after=15)
 
 async def setup(client: commands.Bot) -> None:
-    await client.add_cog(LOAs(client))
+    await client.add_cog(LOACommands(client))

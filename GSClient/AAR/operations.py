@@ -45,7 +45,7 @@ class AAROperations:
         loc = AARS.find(str(log_id).zfill(14))
 
         if loc is None:
-            raise e.LogNotFound(f'LogID `{log_id}` not found in AAR sheet.')
+            raise ValueError(f'LogID `{log_id}` not found in AAR sheet.')
         else:
             row = loc.row
             length = len(AARS.row_values(row))
